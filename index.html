@@ -243,7 +243,7 @@ textarea.notes-input { min-height:80px; resize:vertical; }
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v18l-6-4-6 4V4z"/></svg><span>Đã lưu</span>
     </button>
     <button class="tab" data-tab="settings" role="tab" aria-selected="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>Cài đặt</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6-3.6z"/></svg><span>Cài đặt</span>
     </button>
 </nav>
 
@@ -282,7 +282,7 @@ const toastEl = $('toast');
 const API = 'https://graphql.anilist.co';
 const STORE_KEY = 'anime_v3_watchlist';
 const SETTINGS_KEY = 'anime_v3_settings';
-const CACHE_KEY = 'anime_v3_cache_v4';
+const CACHE_KEY = 'anime_v3_cache_v5';
 const STATUS_LIST = ['watching','planning','considering','completed','paused','dropped','rewatching','skipping'];
 const STATUS_LABELS = { watching:'Đang xem', planning:'Dự định', considering:'Cân nhắc', completed:'Đã xong', paused:'Tạm dừng', dropped:'Bỏ', rewatching:'Xem lại', skipping:'Bỏ qua' };
 const GENRES = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Horror','Mahou Shoujo','Mecha','Music','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Thriller'];
@@ -315,15 +315,42 @@ function setEntry(id, entry) {
     setStore(s);
 }
 
-async function gql(query, variables) {
+// Hàm gọi API với cơ chế Retry & Tăng thời gian Cache tối ưu cho GitHub Pages
+async function gql(query, variables, retries = 3) {
     const key = CACHE_KEY + ':' + btoa(unescape(encodeURIComponent(JSON.stringify(variables||{})))).slice(0,100);
-    try { const c = sessionStorage.getItem(key); if (c) { const { data, ts } = JSON.parse(c); if (Date.now()-ts < 5*60*1000) return data; } } catch {}
-    const res = await fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', 'Accept':'application/json' }, body: JSON.stringify({ query, variables }) });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (data?.errors) console.warn('AniList GraphQL errors:', data.errors);
-    try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
-    return data;
+    try { 
+        const c = sessionStorage.getItem(key); 
+        if (c) { 
+            const { data, ts } = JSON.parse(c); 
+            if (Date.now()-ts < 15*60*1000) return data; // Tăng cache lên 15 phút
+        } 
+    } catch {}
+
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await fetch(API, { 
+                method:'POST', 
+                headers:{ 'Content-Type':'application/json', 'Accept':'application/json' }, 
+                body: JSON.stringify({ query, variables }) 
+            });
+
+            if (res.status === 429) {
+                // Rate limit -> Đợi 1.5s rồi thử lại
+                await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+                continue;
+            }
+
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            
+            const data = await res.json();
+            if (data?.errors) console.warn('AniList GraphQL errors:', data.errors);
+            try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+            return data;
+        } catch (err) {
+            if (i === retries - 1) throw err;
+            await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+        }
+    }
 }
 
 async function fetchSchedule() {
@@ -341,6 +368,7 @@ async function fetchSchedule() {
         score: s.media?.averageScore || 0, popularity: s.media?.popularity || 0, genres: s.media?.genres || []
     }));
 }
+
 async function fetchTopList(sort, status) {
     const vars = { sort, perPage: 15 };
     let q = `query ($sort:[MediaSort], $perPage:Int) { Page(page:1, perPage:$perPage) { media(type:ANIME, sort:$sort) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres } } }`;
@@ -348,16 +376,20 @@ async function fetchTopList(sort, status) {
     const d = await gql(q, vars);
     return (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [] }));
 }
+
 function currentSeason() { const m = new Date().getMonth() + 1; return m <= 3 ? 'WINTER' : m <= 6 ? 'SPRING' : m <= 9 ? 'SUMMER' : 'FALL'; }
+
 async function fetchSeason(season, year) {
     const d = await gql(`query ($season:MediaSeason, $year:Int) { Page(page:1, perPage:20) { media(type:ANIME, season:$season, seasonYear:$year, sort:POPULARITY_DESC) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres } } }`, { season, year });
     return (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [] }));
 }
+
 async function fetchSearch(q) {
     if (!q.trim()) return [];
     const d = await gql(`query ($q:String) { Page(page:1, perPage:20) { media(type:ANIME, search:$q) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres status episodes } } }`, { q });
     return (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [], status: m.status, episodes: m.episodes }));
 }
+
 async function fetchBrowse(filters, page) {
     const vars = { page, perPage: 20 };
     const conds = ['type:ANIME'];
@@ -397,7 +429,7 @@ async function fetchDetail(id) {
             recommendations(sort: RATING_DESC, perPage: 10) { nodes { mediaRecommendation { id title { romaji english } coverImage { medium large extraLarge } } } }
             reviews(sort: RATING_DESC, perPage: 5) { nodes { id summary body(asHtml:false) score createdAt user { name } } }
             stats { scoreDistribution { score amount } statusDistribution { status amount } }
-            airingSchedule(notYetAired: false, perPage: 50) { nodes { airingAt episode timeUntilAiring } }
+            airingSchedule(perPage: 50) { nodes { airingAt episode timeUntilAiring } }
         }
     }`, { id });
     return d?.data?.Media || null;
@@ -470,14 +502,16 @@ function scheduleRow(s) {
     return b;
 }
 
+// Tối ưu hàm renderHome tránh bị quá tải API trên GitHub Pages
 async function renderHome() {
     renderSkeleton();
     try {
-        const [trending, schedule, seasonList, topScore, upcoming] = await Promise.all([
-            fetchTopList(['TRENDING_DESC']), fetchSchedule(),
-            fetchSeason(state.season === 'now' ? currentSeason() : state.season, new Date().getFullYear()),
-            fetchTopList(['SCORE_DESC']), fetchTopList(['POPULARITY_DESC'], 'NOT_YET_RELEASED')
+        // Tải trước 2 mục quan trọng nhất
+        const [trending, schedule] = await Promise.all([
+            fetchTopList(['TRENDING_DESC']), 
+            fetchSchedule()
         ]);
+
         const hero = trending[0];
         const now = Math.floor(Date.now()/1000);
         const today = schedule.filter(s => s.airingAt < now + 86400).slice(0, 6);
@@ -492,16 +526,35 @@ async function renderHome() {
             ${secHTML('Điểm cao nhất')}
             ${secHTML('Sắp ra mắt')}
         `;
+        
         if (hero) $('heroBtn').onclick = () => openDetail(hero.id);
-        mainEl.querySelectorAll('.hscroll[data-sec]').forEach(c => {
-            const title = c.dataset.sec;
-            const items = title === 'Đang trending' ? trending : title === 'Mùa này' ? seasonList : title === 'Điểm cao nhất' ? topScore : upcoming;
-            items.forEach(m => c.appendChild(posterCard(m)));
-        });
+        
+        // Render Trending trước
+        const trendingContainer = mainEl.querySelector('.hscroll[data-sec="Đang trending"]');
+        if (trendingContainer) trending.forEach(m => trendingContainer.appendChild(posterCard(m)));
+
         const tl = $('todayList');
         if (today.length) today.forEach(s => tl.appendChild(scheduleRow(s)));
         else tl.innerHTML = '<div style="padding:16px;color:var(--label2);font-size:14px">Không có tập nào hôm nay.</div>';
-    } catch (e) { renderEmpty('Không tải được dữ liệu', 'Kiểm tra mạng hoặc thử lại.', 'Thử lại', renderHome); console.warn(e); }
+
+        // Tải nối các mục còn lại sau để không nghẽn đường truyền
+        fetchSeason(state.season === 'now' ? currentSeason() : state.season, new Date().getFullYear()).then(list => {
+            const c = mainEl.querySelector('.hscroll[data-sec="Mùa này"]');
+            if (c) list.forEach(m => c.appendChild(posterCard(m)));
+        });
+        fetchTopList(['SCORE_DESC']).then(list => {
+            const c = mainEl.querySelector('.hscroll[data-sec="Điểm cao nhất"]');
+            if (c) list.forEach(m => c.appendChild(posterCard(m)));
+        });
+        fetchTopList(['POPULARITY_DESC'], 'NOT_YET_RELEASED').then(list => {
+            const c = mainEl.querySelector('.hscroll[data-sec="Sắp ra mắt"]');
+            if (c) list.forEach(m => c.appendChild(posterCard(m)));
+        });
+
+    } catch (e) { 
+        renderEmpty('Lỗi kết nối API AniList', 'Kiểm tra lại kết nối mạng hoặc thử lại sau vài giây.', 'Thử lại', renderHome); 
+        console.warn(e); 
+    }
 }
 
 async function renderSchedule() {
@@ -580,12 +633,14 @@ function searchTip(t) {
     row.onclick = () => { qEl.value = t; qEl.dispatchEvent(new Event('input')); };
     return row;
 }
+
 function searchResultRow(m) {
     const row = document.createElement('button'); row.type='button'; row.className='row';
     row.innerHTML = `<div class="thumb">${m.cover ? `<img src="${m.cover}" alt="" loading="lazy" decoding="async">` : ''}</div><div class="txt"><div class="title">${m.title}</div><div class="desc">${m.genres.slice(0,3).join(' · ')}${m.episodes ? ' · ' + m.episodes + ' tập' : ''}${m.score ? ' · ' + m.score + ' điểm' : ''}${m.year ? ' · ' + m.year : ''}</div></div><div class="chevron"></div>`;
     row.onclick = () => { haptic(); openDetail(m.id); };
     return row;
 }
+
 function appendLoadMore(parent) {
     const wrap = document.createElement('div'); wrap.style.margin = '16px';
     const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = 'Tải thêm'; btn.style.margin = '0';
@@ -665,6 +720,7 @@ function renderSaved() {
         const e = store[id];
         const row = document.createElement('button'); row.type = 'button'; row.className = 'row';
         row.innerHTML = `<div class="thumb"></div><div class="txt"><div class="title">Anime #${id}</div><div class="desc">${[STATUS_LABELS[e.status] || e.status, e.rating ? e.rating + ' điểm' : '', e.progress ? e.progress + ' tập' : ''].filter(Boolean).join(' · ')}</div></div><div class="chevron"></div>`;
+        row.onclick = () => { haptic(); openDetail(+id); };
         list.appendChild(row);
         gql(`query ($id:Int){ Media(id:$id,type:ANIME){ id title{romaji english native} coverImage{medium large extraLarge} } }`, { id:+id }).then(d => {
             const m = d?.data?.Media; if (!m) return;
@@ -672,7 +728,6 @@ function renderSaved() {
             row.querySelector('.title').textContent = t;
             const src = pickCover(m.coverImage);
             if (src) row.querySelector('.thumb').innerHTML = `<img src="${src}" alt="" loading="lazy" decoding="async">`;
-            row.onclick = () => { haptic(); openDetail(m.id); };
         });
     });
 }
@@ -693,8 +748,8 @@ function renderSettings() {
                     <button class="chip" data-haptic="0">Tắt</button>
                 </div>
                 <div class="row" id="clearDataBtn"><div class="txt"><div class="title" style="color:var(--red)">Xóa toàn bộ dữ liệu</div><div class="desc">Watchlist, rating, notes, cache</div></div><div class="chevron"></div></div>
-                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.3</div></div></div>
-                <div class="row" style="cursor:default"><div class="txt"><div class="title">API</div><div class="desc">AniList GraphQL · Public · Không cần key</div></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.3 (GitHub Edition)</div></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">API</div><div class="desc">AniList GraphQL · Public · không cần Key</div></div></div>
             </div>
         </div>`;
     mainEl.querySelectorAll('[data-fs]').forEach(b => { b.classList.toggle('active', (s.fontSize||'default') === b.dataset.fs); b.onclick = () => { const st = getSettings(); st.fontSize = b.dataset.fs; setSettings(st); applySettings(); renderSettings(); haptic(); }; });
@@ -1065,6 +1120,7 @@ qEl.addEventListener('input', () => {
     if (state.tab !== 'search') { state.tab = 'search'; syncTabs(); }
     if (!state.searchTimer) renderSearch();
 });
+
 seasonChips.addEventListener('click', e => {
     const b = e.target.closest('.chip'); if (!b) return;
     seasonChips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -1073,6 +1129,7 @@ seasonChips.addEventListener('click', e => {
     if (state.tab !== 'home') { state.tab='home'; syncTabs(); }
     renderHome();
 });
+
 tabbar.addEventListener('click', e => {
     const b = e.target.closest('.tab'); if (!b) return;
     state.tab = b.dataset.tab; haptic(); syncTabs();
@@ -1080,9 +1137,11 @@ tabbar.addEventListener('click', e => {
     render();
     window.scrollTo({ top:0, behavior:'smooth' });
 });
+
 $('navAction').onclick = () => {
     if (state.tab === 'home') { haptic(); sessionStorage.clear(); render(); toast('Đã làm mới', 'success'); }
 };
+
 window.addEventListener('scroll', () => {
     if (window.scrollY > 20) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
 }, { passive:true });
@@ -1118,4 +1177,4 @@ renderHome();
 </script>
 
 </body>
-    </html>
+</html>

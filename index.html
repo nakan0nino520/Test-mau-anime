@@ -453,7 +453,6 @@ function posterCard(m) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'poster';
     const src = m.cover || '';
-    // Sửa lỗi srcset: Không tự ý replace URL, chỉ dùng URL gốc đã lấy từ pickCover (extraLarge)
     b.innerHTML = `<div class="img-wrap">
         ${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ''}
         ${m.score ? `<span class="score-badge">${m.score}</span>` : ''}
@@ -483,7 +482,6 @@ async function renderHome() {
         const now = Math.floor(Date.now()/1000);
         const today = schedule.filter(s => s.airingAt < now + 86400).slice(0, 6);
         const secHTML = (title) => `<div class="section"><div class="section-head"><h3>${title}</h3></div><div class="hscroll" data-sec="${title}"></div></div>`;
-        // Hero dùng cover extraLarge
         const heroImg = hero?.cover || '';
 
         mainEl.innerHTML = `
@@ -1120,14 +1118,4 @@ renderHome();
 </script>
 
 </body>
-</html> sdr = true; }, { passive:true });
-sheet.addEventListener('touchmove', e => { if (!sdr) return; sd = e.touches[0].clientY - sy; if (sd > 0) sheet.style.transform = `translateY(${sd}px)`; }, { passive:true });
-sheet.addEventListener('touchend', () => { if (!sdr) return; sdr = false; if (sd > 100) closeSheet(); sheet.style.transform = ''; sd = 0; });
-
-applySettings();
-syncTabs();
-renderHome();
-</script>
-
-</body>
-  </html>
+    </html>

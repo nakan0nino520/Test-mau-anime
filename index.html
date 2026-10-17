@@ -1,1 +1,1133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Anime Schedule</title>
+<style>
+:root {
+    --bg:#f2f2f7; --card:#fff; --label:#000; --label2:#3c3c43; --label3:#6c6c70;
+    --sep:#3c3c4333; --accent:#007aff; --green:#248a3d; --red:#d70015; --orange:#c93400;
+    --fill:#7676801f; --radius:12px; --radius-lg:16px; --icon-bg:#007aff1f;
+}
+@media (prefers-color-scheme: dark) {
+    :root { --bg:#000; --card:#1c1c1e; --label:#fff; --label2:#ebebf5;
+            --label3:#98989d; --sep:#54545899; --accent:#0a84ff;
+            --green:#30d158; --red:#ff453a; --orange:#ff9f0a;
+            --fill:#7676803d; --icon-bg:#0a84ff2e; }
+}
+@media (prefers-contrast: more) {
+    :root { --sep:#000; --label2:#000; --label3:#000; }
+    @media (prefers-color-scheme: dark) { :root { --sep:#fff; --label2:#fff; --label3:#fff; } }
+}
+@media (prefers-reduced-motion: reduce) { * { transition:none!important; animation:none!important; } }
+@media (prefers-reduced-transparency: reduce) {
+    .nav, .tabbar, .segmented { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; background:var(--bg)!important; }
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { margin:0; padding:0; }
+body {
+    background:var(--bg); color:var(--label);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    font-size: clamp(16px, 4.2vw, 19px); line-height:1.4;
+    -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+body[data-fontsize="small"] { font-size:14px; }
+body[data-fontsize="large"] { font-size:20px; }
+img { image-rendering: -webkit-optimize-contrast; }
 
+.nav {
+    position:sticky; top:0; z-index:30;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom:0.5px solid transparent; transition:border-color .2s ease;
+    padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+}
+.nav.scrolled { border-bottom-color:var(--sep); }
+.nav .nav-row { display:flex; align-items:center; gap:8px; min-height:44px; }
+.nav .nav-row .back-btn { border:0; background:transparent; color:var(--accent); font-size:22px; cursor:pointer; min-width:44px; min-height:44px; padding:0 8px; display:none; }
+.nav.back .nav-row .back-btn { display:block; }
+.nav .nav-row .title-inline { flex:1; font-size:17px; font-weight:600; text-align:center; opacity:0; transition:opacity .2s ease; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nav.scrolled .nav-row .title-inline { opacity:1; }
+.nav .nav-row .action-btn { border:0; background:transparent; color:var(--accent); font-size:17px; font-family:inherit; cursor:pointer; min-width:44px; min-height:44px; padding:0 8px; }
+.nav .large-title { margin:4px 0 0; font-size: clamp(28px,8vw,40px); font-weight:700; letter-spacing:0.37px; transition:opacity .2s, transform .2s; }
+.nav.scrolled .large-title, .nav.back .large-title { display:none; }
+
+.search-wrap { padding:12px 16px 0; }
+.search { display:flex; align-items:center; gap:8px; background:var(--fill); border-radius:10px; padding:0 12px; height:44px; }
+.search svg { flex:0 0 20px; width:20px; height:20px; fill:var(--label3); }
+.search input { flex:1; border:0; outline:0; background:transparent; color:var(--label); font-size:inherit; font-family:inherit; height:100%; }
+.search input::placeholder { color:var(--label3); }
+
+.chips { display:flex; gap:8px; overflow-x:auto; padding:12px 16px 4px; scrollbar-width:none; }
+.chips::-webkit-scrollbar { display:none; }
+.chip { flex:0 0 auto; height:34px; padding:0 14px; border:0.5px solid var(--sep); border-radius:999px; background:var(--card); color:var(--label); font-size:15px; font-family:inherit; cursor:pointer; white-space:nowrap; transition:background .15s, color .15s; }
+.chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.chip:focus-visible, .btn:focus-visible, .tab:focus-visible, .row:focus-visible, .poster:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+.hero { position:relative; margin:8px 16px 0; border-radius:var(--radius-lg); overflow:hidden; aspect-ratio:16/9; background:var(--fill); }
+.hero img { width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+.hero-overlay { position:absolute; inset:0; background:linear-gradient(to top, #000d 0%, #0008 40%, transparent 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:16px; }
+.hero-overlay h2 { margin:0 0 4px; color:#fff; font-size:22px; font-weight:700; text-shadow:0 1px 4px #0008; }
+.hero-overlay p { margin:0 0 10px; color:#fffc; font-size:14px; }
+.hero-overlay .btn { width:auto; padding:0 20px; margin:0; height:40px; }
+
+.section { margin-top:24px; }
+.section-head { display:flex; justify-content:space-between; align-items:baseline; padding:0 16px 8px; }
+.section-head h3 { margin:0; font-size:20px; font-weight:700; }
+.hscroll { display:flex; gap:12px; overflow-x:auto; padding:0 16px 4px; scrollbar-width:none; scroll-snap-type:x mandatory; }
+.hscroll::-webkit-scrollbar { display:none; }
+.poster { flex:0 0 140px; scroll-snap-align:start; cursor:pointer; background:var(--card); border-radius:var(--radius); overflow:hidden; border:0; text-align:left; color:var(--label); font-family:inherit; padding:0; }
+.poster:active { transform:scale(0.97); }
+.poster .img-wrap { position:relative; width:100%; aspect-ratio:2/3; background:var(--fill); overflow:hidden; }
+.poster .img-wrap img { width:100%; height:100%; object-fit:cover; object-position:center top; display:block; }
+.poster .score-badge { position:absolute; top:6px; right:6px; background:#000b; color:#fff; padding:3px 7px; border-radius:6px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.poster .info { padding:8px 10px 10px; }
+.poster .t { font-size:14px; font-weight:600; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.poster .m { font-size:12px; color:var(--label2); margin-top:3px; }
+
+.list { margin:8px 16px 0; background:var(--card); border-radius:var(--radius); overflow:hidden; }
+.row { display:flex; align-items:center; gap:12px; padding:0 16px; min-height:64px; border-bottom:0.5px solid var(--sep); cursor:pointer; background:var(--card); text-align:left; width:100%; border-left:0; border-right:0; border-top:0; color:var(--label); font-family:inherit; font-size:inherit; }
+.row:last-child { border-bottom:0; }
+.row:active { background:var(--fill); }
+.row .thumb { flex:0 0 44px; width:44px; height:60px; border-radius:8px; background:var(--fill); overflow:hidden; }
+.row .thumb img { width:100%; height:100%; object-fit:cover; object-position:center top; }
+.row .txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.row .title { font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.row .desc { font-size:14px; color:var(--label2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.row .countdown { font-size:13px; font-weight:600; color:var(--accent); font-variant-numeric:tabular-nums; }
+.row .countdown.soon { color:var(--orange); }
+.row .chevron { flex:0 0 8px; width:8px; height:8px; border-right:1.5px solid var(--label3); border-top:1.5px solid var(--label3); transform:rotate(45deg); }
+
+.btn { width:calc(100% - 32px); margin:20px 16px 0; height:50px; border:0; border-radius:var(--radius); background:var(--accent); color:#fff; font-size:17px; font-weight:600; font-family:inherit; cursor:pointer; }
+.btn:active { opacity:.7; }
+.btn-secondary { width:calc(100% - 32px); margin:8px 16px 0; height:44px; border:0; border-radius:var(--radius); background:transparent; color:var(--accent); font-size:17px; font-weight:500; font-family:inherit; cursor:pointer; }
+.btn-secondary:active { opacity:.5; }
+
+.empty-state { text-align:center; padding:48px 24px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.empty-state svg { width:56px; height:56px; fill:var(--label3); opacity:.6; }
+.empty-state .title { font-size:20px; font-weight:600; }
+.empty-state .desc { font-size:15px; color:var(--label2); max-width:320px; line-height:1.5; }
+
+.skeleton-hero { margin:8px 16px 0; border-radius:var(--radius-lg); aspect-ratio:16/9; background:var(--fill); animation:pulse 1.4s infinite; }
+.skeleton-hscroll { display:flex; gap:12px; padding:8px 16px 4px; overflow:hidden; }
+.skeleton-poster { flex:0 0 140px; border-radius:var(--radius); overflow:hidden; background:var(--card); }
+.skeleton-poster .a { width:100%; aspect-ratio:2/3; background:var(--fill); animation:pulse 1.4s infinite; }
+.skeleton-poster .b { height:14px; margin:8px 10px; background:var(--fill); border-radius:4px; animation:pulse 1.4s infinite; }
+.skeleton-poster .c { height:12px; margin:4px 10px 10px; width:60%; background:var(--fill); border-radius:4px; animation:pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.9} }
+
+.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex; justify-content:space-around; align-items:flex-start; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); background:color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter:saturate(180%) blur(20px); -webkit-backdrop-filter:saturate(180%) blur(20px); border-top:0.5px solid var(--sep); }
+.tabbar .tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; border:0; background:transparent; color:var(--label3); font-size:10px; font-family:inherit; cursor:pointer; padding:4px 0; min-height:44px; position:relative; }
+.tabbar .tab svg { width:24px; height:24px; fill:currentColor; }
+.tabbar .tab.active { color:var(--accent); }
+.tabbar .tab.active svg { fill:var(--accent); }
+
+.detail-page { position:fixed; inset:0; z-index:45; background:var(--bg); overflow-y:auto; transform:translateX(100%); transition:transform .28s cubic-bezier(.32,.72,0,1); padding-bottom:calc(20px + env(safe-area-inset-bottom)); }
+.detail-page.open { transform:translateX(0); }
+.detail-page .detail-nav { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px; padding:calc(env(safe-area-inset-top) + 8px) 16px 8px; background:color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter:saturate(180%) blur(20px); -webkit-backdrop-filter:saturate(180%) blur(20px); border-bottom:0.5px solid var(--sep); }
+.detail-page .detail-nav button { border:0; background:transparent; color:var(--accent); font-size:22px; cursor:pointer; min-width:44px; min-height:44px; padding:0 8px; font-family:inherit; }
+.detail-page .detail-nav .detail-title { flex:1; font-size:16px; font-weight:600; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.segmented { position:sticky; top:calc(env(safe-area-inset-top) + 60px); z-index:1; display:flex; gap:0; margin:8px 16px; background:var(--fill); border-radius:10px; padding:3px; overflow-x:auto; scrollbar-width:none; }
+.segmented::-webkit-scrollbar { display:none; }
+.segmented button { flex:0 0 auto; border:0; background:transparent; color:var(--label); font-size:14px; font-weight:500; font-family:inherit; padding:0 14px; height:32px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+.segmented button.active { background:var(--card); font-weight:600; box-shadow:0 1px 3px #0002; }
+
+.detail-banner { width:100%; aspect-ratio:16/9; object-fit:cover; object-position:center; background:var(--fill); display:block; }
+.detail-head { display:flex; gap:12px; padding:0 16px; margin-top:-48px; position:relative; }
+.detail-head .poster-img { width:100px; height:150px; border-radius:var(--radius); object-fit:cover; object-position:center top; box-shadow:0 4px 12px #0004; background:var(--fill); flex:0 0 100px; }
+.detail-head .meta-col { flex:1; padding-top:52px; min-width:0; }
+.detail-head h2 { margin:0 0 4px; font-size:20px; font-weight:700; line-height:1.25; }
+.detail-head .sub { font-size:14px; color:var(--label2); margin-bottom:6px; }
+.detail-head .scores { display:flex; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--label2); }
+.detail-head .scores strong { color:var(--label); font-variant-numeric:tabular-nums; }
+.detail-section { padding:0 16px 16px; }
+.detail-section h3 { font-size:17px; font-weight:700; margin:16px 0 8px; padding-top:16px; border-top:0.5px solid var(--sep); }
+.detail-section h3:first-child { border-top:0; padding-top:0; margin-top:8px; }
+.detail-section p { margin:0; font-size:15px; line-height:1.5; color:var(--label2); white-space:pre-wrap; }
+.info-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.info-item { background:var(--card); border-radius:10px; padding:10px 12px; }
+.info-item .lbl { font-size:12px; color:var(--label2); text-transform:uppercase; letter-spacing:.5px; }
+.info-item .val { font-size:15px; font-weight:600; color:var(--label); margin-top:2px; }
+.tag-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.tag { font-size:13px; padding:4px 10px; border-radius:999px; background:var(--fill); color:var(--label); }
+.tag.accent { background:var(--icon-bg); color:var(--accent); font-weight:600; }
+.char-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:12px; }
+.char-item { text-align:center; cursor:pointer; background:transparent; border:0; font-family:inherit; color:var(--label); padding:0; }
+.char-item img { width:100%; aspect-ratio:1; object-fit:cover; object-position:center top; border-radius:50%; background:var(--fill); }
+.char-item .n { font-size:13px; font-weight:600; margin-top:6px; line-height:1.2; }
+.char-item .r { font-size:11px; color:var(--label2); }
+.rel-list { display:flex; flex-direction:column; gap:8px; }
+.rel-item { display:flex; gap:10px; align-items:center; padding:8px; background:var(--card); border-radius:var(--radius); cursor:pointer; border:0; text-align:left; color:var(--label); font-family:inherit; font-size:inherit; }
+.rel-item img { width:44px; height:60px; border-radius:6px; object-fit:cover; object-position:center top; background:var(--fill); flex:0 0 44px; }
+.rel-item .n { font-size:14px; font-weight:600; line-height:1.25; }
+.rel-item .rt { font-size:12px; color:var(--label2); }
+.status-buttons { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.status-buttons .chip { height:36px; }
+input.rating-input, textarea.notes-input { width:100%; border:0.5px solid var(--sep); border-radius:10px; padding:10px 12px; background:var(--card); color:var(--label); font-family:inherit; font-size:16px; margin-top:8px; }
+textarea.notes-input { min-height:80px; resize:vertical; }
+.bar-row { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:13px; }
+.bar-row .lbl { flex:0 0 90px; color:var(--label2); }
+.bar-row .bar { flex:1; height:8px; background:var(--fill); border-radius:4px; overflow:hidden; }
+.bar-row .bar > div { height:100%; background:var(--accent); }
+.bar-row .num { flex:0 0 50px; text-align:right; color:var(--label2); font-variant-numeric:tabular-nums; }
+.review-item { background:var(--card); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
+.review-item .h { display:flex; justify-content:space-between; margin-bottom:4px; }
+.review-item .t { font-size:15px; font-weight:600; }
+.review-item .s { font-size:13px; color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+.review-item .m { font-size:13px; color:var(--label2); margin-bottom:6px; }
+.review-item .b { font-size:14px; color:var(--label2); line-height:1.5; }
+.review-item .more { color:var(--accent); font-size:14px; margin-top:6px; display:inline-block; text-decoration:none; }
+
+.sheet-backdrop { position:fixed; inset:0; background:#00000066; z-index:50; opacity:0; pointer-events:none; transition:opacity .25s ease; }
+.sheet-backdrop.open { opacity:1; pointer-events:auto; }
+.sheet { position:fixed; left:0; right:0; bottom:0; z-index:51; background:var(--bg); border-radius:14px 14px 0 0; padding:0 0 calc(20px + env(safe-area-inset-bottom)); max-height:92vh; overflow-y:auto; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); }
+.sheet.open { transform:translateY(0); }
+.sheet .grabber { width:36px; height:5px; border-radius:3px; background:var(--label3); opacity:.4; margin:8px auto 0; }
+.sheet .sheet-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-bottom:0.5px solid var(--sep); position:sticky; top:0; background:var(--bg); z-index:2; }
+.sheet .sheet-nav button { border:0; background:transparent; color:var(--accent); font-size:17px; font-family:inherit; cursor:pointer; padding:8px; min-height:44px; }
+.sheet .sheet-nav .title { font-size:17px; font-weight:600; }
+.sheet .sheet-body { padding:16px; }
+
+.toast { position:fixed; left:50%; bottom:calc(100px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px); opacity:0; background:#000d; color:#fff; padding:10px 16px; border-radius:10px; font-size:15px; z-index:60; pointer-events:none; transition:opacity .25s, transform .25s; max-width:calc(100% - 32px); text-align:center; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--green); }
+.toast.error { background:var(--red); }
+.hidden { display:none !important; }
+</style>
+</head>
+<body data-fontsize="default">
+
+<header class="nav" id="nav" role="banner">
+    <div class="nav-row">
+        <button class="back-btn" id="navBack" aria-label="Quay lại">‹</button>
+        <span class="title-inline" id="navInline">Anime</span>
+        <button class="action-btn" id="navAction" aria-label="Hành động">Làm mới</button>
+    </div>
+    <h1 class="large-title" id="largeTitle">Anime</h1>
+</header>
+
+<div class="search-wrap" id="searchWrap">
+    <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 105.29 14.01l4.35 4.35 1.42-1.42-4.35-4.35A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/></svg>
+        <input id="q" type="search" placeholder="Tìm anime..." autocomplete="off" aria-label="Tìm anime">
+    </label>
+</div>
+
+<div class="chips" id="seasonChips" role="group" aria-label="Chọn mùa">
+    <button class="chip active" data-season="now">Mùa này</button>
+    <button class="chip" data-season="WINTER">Đông</button>
+    <button class="chip" data-season="SPRING">Xuân</button>
+    <button class="chip" data-season="SUMMER">Hạ</button>
+    <button class="chip" data-season="FALL">Thu</button>
+</div>
+
+<main id="main" role="main"></main>
+
+<nav class="tabbar" id="tabbar" role="tablist" aria-label="Điều hướng chính">
+    <button class="tab active" data-tab="home" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg><span>Trang chủ</span>
+    </button>
+    <button class="tab" data-tab="schedule" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H5V8h14v13z"/></svg><span>Lịch</span>
+    </button>
+    <button class="tab" data-tab="search" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 105.29 14.01l4.35 4.35 1.42-1.42-4.35-4.35A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/></svg><span>Khám phá</span>
+    </button>
+    <button class="tab" data-tab="saved" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v18l-6-4-6 4V4z"/></svg><span>Đã lưu</span>
+    </button>
+    <button class="tab" data-tab="settings" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>Cài đặt</span>
+    </button>
+</nav>
+
+<div class="detail-page" id="detailPage" role="dialog" aria-modal="true">
+    <div class="detail-nav">
+        <button id="detailBack" aria-label="Quay lại">‹</button>
+        <span class="detail-title" id="detailTitle">Chi tiết</span>
+        <button id="detailShare" aria-label="Chia sẻ">↗</button>
+    </div>
+    <div id="detailBody"></div>
+</div>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+    <div class="grabber"></div>
+    <div class="sheet-nav">
+        <button id="sheetClose">Đóng</button>
+        <span class="title" id="sheetTitle">Tùy chọn</span>
+        <button id="sheetAction" style="visibility:hidden">Xong</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const nav = $('nav'), qEl = $('q'), mainEl = $('main');
+const seasonChips = $('seasonChips'), tabbar = $('tabbar');
+const backdrop = $('backdrop'), sheet = $('sheet'), sheetTitle = $('sheetTitle');
+const sheetBody = $('sheetBody'), sheetClose = $('sheetClose');
+const detailPage = $('detailPage'), detailBody = $('detailBody'), detailTitle = $('detailTitle');
+const detailBack = $('detailBack'), detailShare = $('detailShare');
+const toastEl = $('toast');
+
+const API = 'https://graphql.anilist.co';
+const STORE_KEY = 'anime_v3_watchlist';
+const SETTINGS_KEY = 'anime_v3_settings';
+const CACHE_KEY = 'anime_v3_cache_v4';
+const STATUS_LIST = ['watching','planning','considering','completed','paused','dropped','rewatching','skipping'];
+const STATUS_LABELS = { watching:'Đang xem', planning:'Dự định', considering:'Cân nhắc', completed:'Đã xong', paused:'Tạm dừng', dropped:'Bỏ', rewatching:'Xem lại', skipping:'Bỏ qua' };
+const GENRES = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Horror','Mahou Shoujo','Mecha','Music','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Thriller'];
+const FORMATS = [{v:'TV',l:'TV'},{v:'MOVIE',l:'Movie'},{v:'OVA',l:'OVA'},{v:'ONA',l:'ONA'},{v:'SPECIAL',l:'Special'},{v:'MUSIC',l:'Music'}];
+const STATUSES = [{v:'RELEASING',l:'Đang chiếu'},{v:'FINISHED',l:'Đã xong'},{v:'NOT_YET_RELEASED',l:'Sắp ra mắt'},{v:'CANCELLED',l:'Đã hủy'},{v:'HIATUS',l:'Tạm hoãn'}];
+const SORTS = [{v:'POPULARITY_DESC',l:'Phổ biến'},{v:'SCORE_DESC',l:'Điểm cao'},{v:'TRENDING_DESC',l:'Trending'},{v:'START_DATE_DESC',l:'Mới nhất'},{v:'TITLE_ROMAJI',l:'Tên A-Z'}];
+
+let state = { tab:'home', season:'now', query:'', currentId:null, searchTimer:null,
+              currentPage:1, filters:{}, detailTab:'overview', detailData:null };
+
+const DEFAULT_SETTINGS = { haptic:true, fontSize:'default' };
+function getSettings() { try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; } }
+function setSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+function applySettings() { const s = getSettings(); document.body.dataset.fontsize = s.fontSize || 'default'; }
+
+function norm(s) { return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d'); }
+function toast(msg, kind) { toastEl.textContent = msg; toastEl.className = 'toast show' + (kind ? ' ' + kind : ''); clearTimeout(toastEl._t); toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 2200); }
+function haptic(ms) { const s = getSettings(); if (s.haptic && navigator.vibrate) navigator.vibrate(ms||8); }
+function fmtNum(n) { return (n||0).toLocaleString('vi-VN'); }
+
+function pickCover(c) { return c ? (c.extraLarge || c.large || c.medium || '') : ''; }
+
+function getStore() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch { return {}; } }
+function setStore(o) { localStorage.setItem(STORE_KEY, JSON.stringify(o)); }
+function getEntry(id) { return getStore()[id] || null; }
+function setEntry(id, entry) {
+    const s = getStore();
+    if (entry && Object.values(entry).some(v => v !== '' && v !== null && v !== undefined && v !== 0)) s[id] = entry;
+    else delete s[id];
+    setStore(s);
+}
+
+async function gql(query, variables) {
+    const key = CACHE_KEY + ':' + btoa(unescape(encodeURIComponent(JSON.stringify(variables||{})))).slice(0,100);
+    try { const c = sessionStorage.getItem(key); if (c) { const { data, ts } = JSON.parse(c); if (Date.now()-ts < 5*60*1000) return data; } } catch {}
+    const res = await fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', 'Accept':'application/json' }, body: JSON.stringify({ query, variables }) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data?.errors) console.warn('AniList GraphQL errors:', data.errors);
+    try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+    return data;
+}
+
+async function fetchSchedule() {
+    const now = Math.floor(Date.now()/1000), in7 = now + 7*24*3600;
+    const d = await gql(`query ($from:Int, $to:Int) {
+        Page(page:1, perPage:50) { airingSchedules(airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) {
+            id airingAt timeUntilAiring episode mediaId
+            media { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres }
+        } }
+    }`, { from:now, to:in7 });
+    return (d?.data?.Page?.airingSchedules || []).map(s => ({
+        id:s.id, mediaId:s.mediaId, airingAt:s.airingAt, timeUntilAiring:s.timeUntilAiring, episode:s.episode,
+        title: s.media?.title?.english || s.media?.title?.romaji || s.media?.title?.native || '?',
+        cover: pickCover(s.media?.coverImage),
+        score: s.media?.averageScore || 0, popularity: s.media?.popularity || 0, genres: s.media?.genres || []
+    }));
+}
+async function fetchTopList(sort, status) {
+    const vars = { sort, perPage: 15 };
+    let q = `query ($sort:[MediaSort], $perPage:Int) { Page(page:1, perPage:$perPage) { media(type:ANIME, sort:$sort) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres } } }`;
+    if (status) { vars.status = status; q = `query ($sort:[MediaSort], $perPage:Int, $status:MediaStatus) { Page(page:1, perPage:$perPage) { media(type:ANIME, sort:$sort, status:$status) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres } } }`; }
+    const d = await gql(q, vars);
+    return (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [] }));
+}
+function currentSeason() { const m = new Date().getMonth() + 1; return m <= 3 ? 'WINTER' : m <= 6 ? 'SPRING' : m <= 9 ? 'SUMMER' : 'FALL'; }
+async function fetchSeason(season, year) {
+    const d = await gql(`query ($season:MediaSeason, $year:Int) { Page(page:1, perPage:20) { media(type:ANIME, season:$season, seasonYear:$year, sort:POPULARITY_DESC) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres } } }`, { season, year });
+    return (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [] }));
+}
+async function fetchSearch(q) {
+    if (!q.trim()) return [];
+    const d = await gql(`query ($q:String) { Page(page:1, perPage:20) { media(type:ANIME, search:$q) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres status episodes } } }`, { q });
+    return (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [], status: m.status, episodes: m.episodes }));
+}
+async function fetchBrowse(filters, page) {
+    const vars = { page, perPage: 20 };
+    const conds = ['type:ANIME'];
+    if (filters.genre) { vars.genre = filters.genre; conds.push('genre:$genre'); }
+    if (filters.year) { vars.year = +filters.year; conds.push('seasonYear:$year'); }
+    if (filters.format) { vars.format = filters.format; conds.push('format:$format'); }
+    if (filters.status) { vars.status = filters.status; conds.push('status:$status'); }
+    vars.sort = filters.sort ? [filters.sort] : ['POPULARITY_DESC'];
+    const argStr = conds.join(', ') + ', sort:$sort';
+    const varDefs = Object.keys(vars).map(k => `$${k}:${k==='sort'?'[MediaSort]':k==='page'||k==='perPage'||k==='year'?'Int':k==='format'?'MediaFormat':k==='status'?'MediaStatus':'String'}`).join(', ');
+    const q = `query (${varDefs}) { Page(page:$page, perPage:$perPage) { pageInfo { hasNextPage } media(${argStr}) { id title { romaji english native } coverImage { medium large extraLarge } averageScore popularity genres status episodes format seasonYear } } }`;
+    const d = await gql(q, vars);
+    return { items: (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [], status:m.status, episodes:m.episodes, format:m.format, year:m.seasonYear })), hasNext: d?.data?.Page?.pageInfo?.hasNextPage || false };
+}
+
+async function fetchDetail(id) {
+    const d = await gql(`query ($id:Int) {
+        Media(id:$id, type:ANIME) {
+            id title { romaji english native } description(asHtml:false)
+            coverImage { extraLarge large medium } bannerImage
+            averageScore meanScore popularity favourites trending rank
+            genres tags { name rank } studios { edges { isMain node { id name } } }
+            season seasonYear episodes duration status format source
+            startDate { year month day } endDate { year month day }
+            trailer { site id }
+            externalLinks { site url }
+            streamingEpisodes { title url site thumbnail }
+            characters(sort: ROLE, perPage: 24) {
+                edges {
+                    role
+                    node { id name { full native } image { large medium } favourites }
+                    voiceActors { name { full } image { large medium } }
+                }
+            }
+            staff(sort: RELEVANCE, perPage: 24) { edges { role node { id name { full } image { large medium } } } }
+            relations { edges { relationType node { id title { romaji english } coverImage { medium large extraLarge } averageScore seasonYear } } }
+            recommendations(sort: RATING_DESC, perPage: 10) { nodes { mediaRecommendation { id title { romaji english } coverImage { medium large extraLarge } } } }
+            reviews(sort: RATING_DESC, perPage: 5) { nodes { id summary body(asHtml:false) score createdAt user { name } } }
+            stats { scoreDistribution { score amount } statusDistribution { status amount } }
+            airingSchedule(notYetAired: false, perPage: 50) { nodes { airingAt episode timeUntilAiring } }
+        }
+    }`, { id });
+    return d?.data?.Media || null;
+}
+
+async function fetchCharacter(id) {
+    const d = await gql(`query ($id:Int) {
+        Character(id:$id) {
+            id name { full native } image { large } description(asHtml:false)
+            gender dateOfBirth { year month day } age bloodType favourites
+            media(sort: POPULARITY_DESC, perPage: 12) {
+                edges {
+                    characterRole
+                    voiceActors { name { full } image { medium large } }
+                    node { id title { romaji english } coverImage { medium large extraLarge } }
+                }
+            }
+        }
+    }`, { id });
+    return d?.data?.Character || null;
+}
+
+async function fetchStaff(id) {
+    const d = await gql(`query ($id:Int) {
+        Staff(id:$id) {
+            id name { full native } image { large } description(asHtml:false)
+            languageV2 primaryOccupations dateOfBirth { year month day } age homeTown favourites
+            staffMedia(sort: POPULARITY_DESC, perPage: 12) {
+                edges { staffRole node { id title { romaji english } coverImage { medium large extraLarge } } }
+            }
+        }
+    }`, { id });
+    return d?.data?.Staff || null;
+}
+
+function formatCountdown(airingAt) { const d = airingAt - Math.floor(Date.now()/1000); if (d <= 0) return 'Đã chiếu'; const day = Math.floor(d/86400), h = Math.floor((d%86400)/3600), m = Math.floor((d%3600)/60); if (day > 0) return `Còn ${day} ngày ${h} giờ`; if (h > 0) return `Còn ${h} giờ ${m} phút`; return `Còn ${m} phút`; }
+function formatDate(ts) { return new Date(ts*1000).toLocaleString('vi-VN', { weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); }
+function stripHtml(s) { return s ? s.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&[a-z]+;/gi,' ').trim() : ''; }
+function fmtDateParts(d) { return d && d.year ? [d.day, d.month, d.year].filter(Boolean).join('/') : '—'; }
+
+function renderSkeleton() { mainEl.innerHTML = `<div class="skeleton-hero"></div><div class="section"><div class="skeleton-hscroll">${Array(3).fill('<div class="skeleton-poster"><div class="a"></div><div class="b"></div><div class="c"></div></div>').join('')}</div></div>`; }
+
+function renderEmpty(title, desc, actionLabel, actionFn) {
+    mainEl.innerHTML = '';
+    const el = document.createElement('div');
+    el.className = 'empty-state';
+    el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><div class="title">${title}</div><div class="desc">${desc}</div>`;
+    if (actionLabel) { const b = document.createElement('button'); b.className='btn'; b.textContent=actionLabel; b.onclick=actionFn; el.appendChild(b); }
+    mainEl.appendChild(el);
+}
+
+function posterCard(m) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'poster';
+    const src = m.cover || '';
+    // Sửa lỗi srcset: Không tự ý replace URL, chỉ dùng URL gốc đã lấy từ pickCover (extraLarge)
+    b.innerHTML = `<div class="img-wrap">
+        ${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ''}
+        ${m.score ? `<span class="score-badge">${m.score}</span>` : ''}
+    </div><div class="info"><div class="t">${m.title}</div>${m.genres && m.genres.length ? `<div class="m">${m.genres.slice(0,2).join(' · ')}</div>` : ''}</div>`;
+    b.onclick = () => { haptic(); openDetail(m.id); };
+    return b;
+}
+
+function scheduleRow(s) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'row';
+    const st = getEntry(s.mediaId)?.status;
+    b.innerHTML = `<div class="thumb">${s.cover ? `<img src="${s.cover}" alt="" loading="lazy" decoding="async">` : ''}</div><div class="txt"><div class="title">${s.title}</div><div class="desc">Tập ${s.episode} · ${formatDate(s.airingAt)}${st ? ' · ' + (STATUS_LABELS[st] || st) : ''}</div><div class="countdown ${s.timeUntilAiring < 3600 ? 'soon' : ''}">${formatCountdown(s.airingAt)}</div></div><div class="chevron"></div>`;
+    b.onclick = () => { haptic(); openDetail(s.mediaId); };
+    return b;
+}
+
+async function renderHome() {
+    renderSkeleton();
+    try {
+        const [trending, schedule, seasonList, topScore, upcoming] = await Promise.all([
+            fetchTopList(['TRENDING_DESC']), fetchSchedule(),
+            fetchSeason(state.season === 'now' ? currentSeason() : state.season, new Date().getFullYear()),
+            fetchTopList(['SCORE_DESC']), fetchTopList(['POPULARITY_DESC'], 'NOT_YET_RELEASED')
+        ]);
+        const hero = trending[0];
+        const now = Math.floor(Date.now()/1000);
+        const today = schedule.filter(s => s.airingAt < now + 86400).slice(0, 6);
+        const secHTML = (title) => `<div class="section"><div class="section-head"><h3>${title}</h3></div><div class="hscroll" data-sec="${title}"></div></div>`;
+        // Hero dùng cover extraLarge
+        const heroImg = hero?.cover || '';
+
+        mainEl.innerHTML = `
+            ${hero ? `<div class="hero">${heroImg ? `<img src="${heroImg}" alt="" loading="lazy" decoding="async">` : ''}<div class="hero-overlay"><h2>${hero.title}</h2><p>${hero.genres.slice(0,3).join(' · ')}${hero.score ? ' · Điểm ' + hero.score : ''}</p><button class="btn" id="heroBtn">Xem chi tiết</button></div></div>` : ''}
+            ${secHTML('Đang trending')}
+            <div class="section"><div class="section-head"><h3>Hôm nay</h3></div><div class="list" id="todayList"></div></div>
+            ${secHTML('Mùa này')}
+            ${secHTML('Điểm cao nhất')}
+            ${secHTML('Sắp ra mắt')}
+        `;
+        if (hero) $('heroBtn').onclick = () => openDetail(hero.id);
+        mainEl.querySelectorAll('.hscroll[data-sec]').forEach(c => {
+            const title = c.dataset.sec;
+            const items = title === 'Đang trending' ? trending : title === 'Mùa này' ? seasonList : title === 'Điểm cao nhất' ? topScore : upcoming;
+            items.forEach(m => c.appendChild(posterCard(m)));
+        });
+        const tl = $('todayList');
+        if (today.length) today.forEach(s => tl.appendChild(scheduleRow(s)));
+        else tl.innerHTML = '<div style="padding:16px;color:var(--label2);font-size:14px">Không có tập nào hôm nay.</div>';
+    } catch (e) { renderEmpty('Không tải được dữ liệu', 'Kiểm tra mạng hoặc thử lại.', 'Thử lại', renderHome); console.warn(e); }
+}
+
+async function renderSchedule() {
+    renderSkeleton();
+    try {
+        const schedule = await fetchSchedule();
+        const byDay = {};
+        schedule.forEach(s => {
+            const d = new Date(s.airingAt * 1000);
+            const key = d.toLocaleDateString('vi-VN', { weekday:'long', day:'2-digit', month:'2-digit' });
+            if (!byDay[key]) byDay[key] = [];
+            byDay[key].push(s);
+        });
+        mainEl.innerHTML = '';
+        Object.entries(byDay).forEach(([day, items]) => {
+            const sec = document.createElement('div');
+            sec.className = 'section';
+            sec.innerHTML = `<div class="section-head"><h3>${day}</h3></div>`;
+            const list = document.createElement('div');
+            list.className = 'list';
+            items.forEach(s => list.appendChild(scheduleRow(s)));
+            sec.appendChild(list);
+            mainEl.appendChild(sec);
+        });
+        if (!Object.keys(byDay).length) renderEmpty('Lịch trống', 'Không có tập nào trong 7 ngày tới.', 'Tải lại', renderSchedule);
+    } catch (e) { renderEmpty('Không tải được lịch', 'Kiểm tra mạng hoặc thử lại.', 'Thử lại', renderSchedule); console.warn(e); }
+}
+
+function renderSearch() {
+    mainEl.innerHTML = `
+        <div class="section">
+            <div class="section-head"><h3>Khám phá</h3><button id="openFilters">Bộ lọc</button></div>
+            <div class="list" id="searchResults" style="margin-top:0"></div>
+        </div>`;
+    const resultsEl = $('searchResults');
+
+    const doSearch = async (q) => {
+        if (q.trim()) {
+            resultsEl.innerHTML = '<div style="padding:16px;color:var(--label2)">Đang tìm...</div>';
+            try {
+                const results = await fetchSearch(q);
+                resultsEl.innerHTML = '';
+                if (!results.length) { resultsEl.innerHTML = '<div style="padding:16px;color:var(--label2)">Không tìm thấy.</div>'; return; }
+                results.forEach(m => resultsEl.appendChild(searchResultRow(m)));
+            } catch { resultsEl.innerHTML = '<div style="padding:16px;color:var(--red)">Lỗi tìm kiếm.</div>'; }
+        } else {
+            const f = state.filters;
+            const hasFilter = Object.keys(f).filter(k => f[k]).length > 0;
+            if (hasFilter) {
+                resultsEl.innerHTML = '<div style="padding:16px;color:var(--label2)">Đang tải...</div>';
+                try {
+                    const r = await fetchBrowse(f, 1);
+                    state.currentPage = 1;
+                    resultsEl.innerHTML = '';
+                    if (!r.items.length) { resultsEl.innerHTML = '<div style="padding:16px;color:var(--label2)">Không có kết quả.</div>'; return; }
+                    r.items.forEach(m => resultsEl.appendChild(searchResultRow(m)));
+                    if (r.hasNext) appendLoadMore(resultsEl);
+                } catch { resultsEl.innerHTML = '<div style="padding:16px;color:var(--red)">Lỗi tải.</div>'; }
+            } else {
+                resultsEl.innerHTML = '';
+                const tips = ['One Piece','Attack on Titan','Demon Slayer','Jujutsu Kaisen','Spy x Family','Frieren','Solo Leveling','Chainsaw Man'];
+                tips.forEach(t => resultsEl.appendChild(searchTip(t)));
+            }
+        }
+    };
+
+    qEl.oninput = () => { clearTimeout(state.searchTimer); state.searchTimer = setTimeout(() => doSearch(qEl.value), 350); };
+    qEl.focus();
+    doSearch(qEl.value);
+    $('openFilters').onclick = () => openFiltersSheet();
+}
+
+function searchTip(t) {
+    const row = document.createElement('button'); row.type='button'; row.className='row';
+    row.innerHTML = `<div class="icon" style="background:var(--fill);display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px">🔍</div><div class="txt"><div class="title">${t}</div><div class="desc">Chạm để tìm</div></div><div class="chevron"></div>`;
+    row.onclick = () => { qEl.value = t; qEl.dispatchEvent(new Event('input')); };
+    return row;
+}
+function searchResultRow(m) {
+    const row = document.createElement('button'); row.type='button'; row.className='row';
+    row.innerHTML = `<div class="thumb">${m.cover ? `<img src="${m.cover}" alt="" loading="lazy" decoding="async">` : ''}</div><div class="txt"><div class="title">${m.title}</div><div class="desc">${m.genres.slice(0,3).join(' · ')}${m.episodes ? ' · ' + m.episodes + ' tập' : ''}${m.score ? ' · ' + m.score + ' điểm' : ''}${m.year ? ' · ' + m.year : ''}</div></div><div class="chevron"></div>`;
+    row.onclick = () => { haptic(); openDetail(m.id); };
+    return row;
+}
+function appendLoadMore(parent) {
+    const wrap = document.createElement('div'); wrap.style.margin = '16px';
+    const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = 'Tải thêm'; btn.style.margin = '0';
+    btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = 'Đang tải...';
+        try {
+            const next = state.currentPage + 1;
+            const r = await fetchBrowse(state.filters, next);
+            state.currentPage = next;
+            const frag = document.createDocumentFragment();
+            r.items.forEach(m => frag.appendChild(searchResultRow(m)));
+            parent.insertBefore(frag, wrap);
+            if (!r.hasNext) btn.remove(); else { btn.disabled = false; btn.textContent = 'Tải thêm'; }
+        } catch { btn.disabled = false; btn.textContent = 'Lỗi, thử lại'; }
+    };
+    wrap.appendChild(btn);
+    parent.appendChild(wrap);
+}
+
+function openFiltersSheet() {
+    sheetTitle.textContent = 'Bộ lọc';
+    const f = state.filters;
+    let html = '';
+    html += `<h3 style="margin:8px 0 4px;font-size:15px">Thể loại</h3><div class="tag-list" id="genreTags">`;
+    GENRES.forEach(g => { html += `<button class="chip ${f.genre === g ? 'active' : ''}" data-genre="${g}">${g}</button>`; });
+    html += `</div>`;
+    html += `<h3 style="margin:16px 0 4px;font-size:15px">Năm</h3><input type="number" min="1990" max="${new Date().getFullYear()+1}" class="rating-input" id="fyear" placeholder="VD: 2024" value="${f.year || ''}">`;
+    html += `<h3 style="margin:16px 0 4px;font-size:15px">Định dạng</h3><div class="tag-list" id="formatTags">`;
+    FORMATS.forEach(x => { html += `<button class="chip ${f.format === x.v ? 'active' : ''}" data-format="${x.v}">${x.l}</button>`; });
+    html += `</div>`;
+    html += `<h3 style="margin:16px 0 4px;font-size:15px">Trạng thái</h3><div class="tag-list" id="statusTags">`;
+    STATUSES.forEach(x => { html += `<button class="chip ${f.status === x.v ? 'active' : ''}" data-status="${x.v}">${x.l}</button>`; });
+    html += `</div>`;
+    html += `<h3 style="margin:16px 0 4px;font-size:15px">Sắp xếp</h3><div class="tag-list" id="sortTags">`;
+    SORTS.forEach(x => { html += `<button class="chip ${f.sort === x.v ? 'active' : ''}" data-sort="${x.v}">${x.l}</button>`; });
+    html += `</div>`;
+    html += `<button class="btn" id="applyFilters" style="margin-top:20px">Áp dụng</button>`;
+    html += `<button class="btn-secondary" id="clearFilters" style="margin-left:16px;margin-right:16px;width:calc(100% - 32px)">Xóa bộ lọc</button>`;
+    sheetBody.innerHTML = html;
+
+    const toggles = [['#genreTags', 'genre', 'data-genre'], ['#formatTags', 'format', 'data-format'], ['#statusTags', 'status', 'data-status'], ['#sortTags', 'sort', 'data-sort']];
+    toggles.forEach(([sel, key, attr]) => {
+        sheetBody.querySelectorAll(sel + ' button').forEach(b => {
+            b.onclick = () => {
+                const val = b.getAttribute(attr);
+                const cur = state.filters[key];
+                state.filters[key] = cur === val ? undefined : val;
+                b.classList.toggle('active');
+            };
+        });
+    });
+    $('applyFilters').onclick = () => {
+        const y = $('fyear').value.trim();
+        state.filters.year = y ? +y : undefined;
+        closeSheet();
+        renderSearch();
+    };
+    $('clearFilters').onclick = () => {
+        state.filters = {};
+        closeSheet();
+        renderSearch();
+    };
+    backdrop.classList.add('open');
+    sheet.classList.add('open');
+}
+
+function renderSaved() {
+    const store = getStore();
+    const ids = Object.keys(store).filter(id => {
+        const e = store[id];
+        return e && (e.status || e.rating || e.notes || e.progress);
+    });
+    if (!ids.length) { renderEmpty('Chưa có anime nào', 'Đánh dấu trạng thái để theo dõi lịch và thông tin.', 'Khám phá', () => { state.tab = 'search'; syncTabs(); render(); }); return; }
+    mainEl.innerHTML = `<div class="section"><div class="section-head"><h3>Đã lưu (${ids.length})</h3></div><div class="list" id="savedList"></div></div>`;
+    const list = $('savedList');
+    ids.forEach(id => {
+        const e = store[id];
+        const row = document.createElement('button'); row.type = 'button'; row.className = 'row';
+        row.innerHTML = `<div class="thumb"></div><div class="txt"><div class="title">Anime #${id}</div><div class="desc">${[STATUS_LABELS[e.status] || e.status, e.rating ? e.rating + ' điểm' : '', e.progress ? e.progress + ' tập' : ''].filter(Boolean).join(' · ')}</div></div><div class="chevron"></div>`;
+        list.appendChild(row);
+        gql(`query ($id:Int){ Media(id:$id,type:ANIME){ id title{romaji english native} coverImage{medium large extraLarge} } }`, { id:+id }).then(d => {
+            const m = d?.data?.Media; if (!m) return;
+            const t = m.title?.english || m.title?.romaji || m.title?.native || ('Anime #' + id);
+            row.querySelector('.title').textContent = t;
+            const src = pickCover(m.coverImage);
+            if (src) row.querySelector('.thumb').innerHTML = `<img src="${src}" alt="" loading="lazy" decoding="async">`;
+            row.onclick = () => { haptic(); openDetail(m.id); };
+        });
+    });
+}
+
+function renderSettings() {
+    const s = getSettings();
+    mainEl.innerHTML = `
+        <div class="section">
+            <div class="section-head"><h3>Cài đặt</h3></div>
+            <div class="list">
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">Cỡ chữ</div><div class="desc">${s.fontSize || 'default'}</div></div>
+                    <button class="chip" data-fs="small">Nhỏ</button>
+                    <button class="chip" data-fs="default">Vừa</button>
+                    <button class="chip" data-fs="large">Lớn</button>
+                </div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">Rung phản hồi</div><div class="desc">Haptic feedback</div></div>
+                    <button class="chip" data-haptic="1">Bật</button>
+                    <button class="chip" data-haptic="0">Tắt</button>
+                </div>
+                <div class="row" id="clearDataBtn"><div class="txt"><div class="title" style="color:var(--red)">Xóa toàn bộ dữ liệu</div><div class="desc">Watchlist, rating, notes, cache</div></div><div class="chevron"></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.3</div></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">API</div><div class="desc">AniList GraphQL · Public · Không cần key</div></div></div>
+            </div>
+        </div>`;
+    mainEl.querySelectorAll('[data-fs]').forEach(b => { b.classList.toggle('active', (s.fontSize||'default') === b.dataset.fs); b.onclick = () => { const st = getSettings(); st.fontSize = b.dataset.fs; setSettings(st); applySettings(); renderSettings(); haptic(); }; });
+    mainEl.querySelectorAll('[data-haptic]').forEach(b => { b.classList.toggle('active', (s.haptic?'1':'0') === b.dataset.haptic); b.onclick = () => { const st = getSettings(); st.haptic = b.dataset.haptic === '1'; setSettings(st); renderSettings(); haptic(); }; });
+    $('clearDataBtn').onclick = () => { if (confirm('Xóa toàn bộ dữ liệu?')) { localStorage.removeItem(STORE_KEY); sessionStorage.clear(); haptic(20); toast('Đã xóa dữ liệu', 'error'); render(); } };
+}
+
+async function openDetail(id) {
+    state.currentId = id;
+    state.detailTab = 'overview';
+    detailPage.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--label2)">Đang tải...</div>';
+    detailTitle.textContent = 'Chi tiết';
+    try {
+        const m = await fetchDetail(id);
+        state.detailData = m;
+        if (!m) {
+            detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red)">Không tải được chi tiết. Thử lại sau.</div>';
+            return;
+        }
+        const title = m.title?.english || m.title?.romaji || m.title?.native || 'Anime';
+        detailTitle.textContent = title;
+        renderDetailTab();
+    } catch (e) {
+        detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red)">Lỗi tải. Kiểm tra kết nối mạng.</div>';
+        console.warn(e);
+    }
+}
+
+function renderDetailTab() {
+    const m = state.detailData;
+    if (!m) return;
+    const tab = state.detailTab;
+    const entry = getEntry(m.id) || {};
+    const studios = (m.studios?.edges || []).filter(e => e.isMain).map(e => e.node.name).join(', ');
+    const title = m.title?.english || m.title?.romaji || m.title?.native || 'Anime';
+
+    let tabs = `<div class="segmented" id="detailTabs">`;
+    [['overview','Tổng quan'],['characters','Nhân vật'],['staff','Staff'],['relations','Quan hệ'],['reviews','Đánh giá'],['stats','Thống kê'],['episodes','Tập phim']].forEach(([k,l]) => { tabs += `<button data-dtab="${k}" class="${tab===k?'active':''}">${l}</button>`; });
+    tabs += `</div>`;
+
+    let content = '';
+    if (tab === 'overview') content = renderOverview(m, entry, studios);
+    else if (tab === 'characters') content = renderCharacters(m);
+    else if (tab === 'staff') content = renderStaff(m);
+    else if (tab === 'relations') content = renderRelations(m);
+    else if (tab === 'reviews') content = renderReviews(m);
+    else if (tab === 'stats') content = renderStats(m);
+    else if (tab === 'episodes') content = renderEpisodes(m);
+
+    const bannerSrc = m.bannerImage || pickCover(m.coverImage);
+    const posterSrc = pickCover(m.coverImage);
+
+    let head = '';
+    if (bannerSrc) head += `<img class="detail-banner" src="${bannerSrc}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">`;
+    head += `<div class="detail-head">`;
+    if (posterSrc) head += `<img class="poster-img" src="${posterSrc}" alt="" loading="lazy" decoding="async">`;
+    head += `<div class="meta-col"><h2>${title}</h2>`;
+    if (m.title?.romaji && m.title.romaji !== title) head += `<div class="sub">${m.title.romaji}</div>`;
+    head += `<div class="scores">
+        ${m.averageScore ? `<span>Điểm <strong>${m.averageScore}</strong></span>` : ''}
+        ${m.popularity ? `<span>Phổ biến <strong>${fmtNum(m.popularity)}</strong></span>` : ''}
+        ${m.favourites ? `<span>Yêu thích <strong>${fmtNum(m.favourites)}</strong></span>` : ''}
+        ${m.rank ? `<span>Hạng <strong>#${m.rank}</strong></span>` : ''}
+    </div></div></div>`;
+
+    detailBody.innerHTML = head + tabs + `<div id="detailTabContent">${content}</div>`;
+
+    detailBody.querySelectorAll('[data-dtab]').forEach(b => b.onclick = () => { state.detailTab = b.dataset.dtab; renderDetailTab(); });
+    wireDetailActions(m);
+}
+
+function renderOverview(m, entry, studios) {
+    let html = `<div class="detail-section">`;
+    html += `<h3>Thông tin</h3><div class="info-grid">`;
+    const info = [
+        ['Studio', studios || '—'],
+        ['Mùa', m.season ? `${m.season} ${m.seasonYear||''}` : '—'],
+        ['Số tập', m.episodes || '—'],
+        ['Thời lượng', m.duration ? m.duration + ' phút' : '—'],
+        ['Trạng thái', m.status || '—'],
+        ['Định dạng', m.format || '—'],
+        ['Bắt đầu', fmtDateParts(m.startDate)],
+        ['Kết thúc', fmtDateParts(m.endDate)],
+        ['Nguồn', m.source || '—']
+    ];
+    info.forEach(([k,v]) => html += `<div class="info-item"><div class="lbl">${k}</div><div class="val">${v}</div></div>`);
+    html += `</div>`;
+
+    if (m.genres?.length) {
+        html += `<h3>Thể loại</h3><div class="tag-list">`;
+        m.genres.forEach(g => html += `<span class="tag accent">${g}</span>`);
+        html += `</div>`;
+    }
+    if (m.tags?.length) {
+        const tags = m.tags.filter(t => t.rank >= 50).slice(0, 15);
+        if (tags.length) {
+            html += `<h3>Tags</h3><div class="tag-list">`;
+            tags.forEach(t => html += `<span class="tag">${t.name} ${t.rank}%</span>`);
+            html += `</div>`;
+        }
+    }
+    if (m.description) html += `<h3>Mô tả</h3><p>${stripHtml(m.description)}</p>`;
+
+    html += `<h3>Theo dõi</h3><div class="status-buttons">`;
+    STATUS_LIST.forEach(st => html += `<button class="chip ${entry.status===st?'active':''}" data-setstatus="${st}">${STATUS_LABELS[st]}</button>`);
+    html += `</div>`;
+    html += `<input type="number" min="0" max="${m.episodes||9999}" class="rating-input" id="progressInput" placeholder="Số tập đã xem (/${m.episodes||'?'})" value="${entry.progress||''}">`;
+    html += `<input type="number" min="1" max="10" class="rating-input" id="ratingInput" placeholder="Đánh giá 1–10" value="${entry.rating||''}">`;
+    html += `<textarea class="notes-input" id="notesInput" placeholder="Ghi chú...">${entry.notes||''}</textarea>`;
+
+    const streaming = (m.streamingEpisodes||[]).slice(0,5);
+    const external = (m.externalLinks||[]).filter(l => /Crunchyroll|Netflix|HIDIVE|Prime|Disney|Bilibili|FPT|Muse|AnimeLab|Hulu|YouTube/i.test(l.site)).slice(0,5);
+    if (streaming.length || external.length) {
+        html += `<h3>Xem hợp pháp</h3>`;
+        streaming.forEach(st => { if (st.url) html += `<a style="display:block;color:var(--accent);padding:8px 0;min-height:44px;text-decoration:none" href="${st.url}" target="_blank" rel="noopener">▶ ${st.site||'Xem'}: ${st.title||'Tập mới'}</a>`; });
+        external.forEach(l => html += `<a style="display:block;color:var(--accent);padding:8px 0;min-height:44px;text-decoration:none" href="${l.url}" target="_blank" rel="noopener">${l.site} →</a>`);
+    }
+    if (m.trailer && m.trailer.site === 'youtube') html += `<h3>Trailer</h3><iframe src="https://www.youtube.com/embed/${m.trailer.id}" allowfullscreen loading="lazy" style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:8px"></iframe>`;
+
+    html += `<button class="btn" id="shareDetail" style="margin-top:20px">Chia sẻ</button>`;
+    html += `</div>`;
+    return html;
+}
+
+function renderCharacters(m) {
+    const edges = m.characters?.edges || [];
+    const main = edges.filter(e => e.role === 'MAIN');
+    const sup = edges.filter(e => e.role === 'SUPPORTING');
+    let html = `<div class="detail-section">`;
+    if (main.length) { html += `<h3>Nhân vật chính (${main.length})</h3><div class="char-grid">`; main.forEach(c => html += charItem(c)); html += `</div>`; }
+    if (sup.length) { html += `<h3>Nhân vật phụ (${sup.length})</h3><div class="char-grid">`; sup.forEach(c => html += charItem(c)); html += `</div>`; }
+    if (!edges.length) html += `<p>Không có thông tin nhân vật.</p>`;
+    html += `</div>`;
+    return html;
+}
+function charItem(c) {
+    const va = c.voiceActors && c.voiceActors[0];
+    const img = c.node.image?.large || c.node.image?.medium || '';
+    return `<button class="char-item" data-char="${c.node.id}">
+        ${img ? `<img src="${img}" alt="" loading="lazy" decoding="async">` : ''}
+        <div class="n">${c.node.name?.full || ''}</div>
+        <div class="r">${va ? va.name.full : ''}</div>
+    </button>`;
+}
+
+function renderStaff(m) {
+    const edges = m.staff?.edges || [];
+    let html = `<div class="detail-section"><h3>Staff (${edges.length})</h3><div class="char-grid">`;
+    edges.forEach(s => {
+        const img = s.node.image?.large || s.node.image?.medium || '';
+        html += `<button class="char-item" data-staff="${s.node.id}">
+            ${img ? `<img src="${img}" alt="" loading="lazy" decoding="async">` : ''}
+            <div class="n">${s.node.name?.full || ''}</div>
+            <div class="r">${s.role || ''}</div>
+        </button>`;
+    });
+    html += `</div></div>`;
+    return html;
+}
+
+function renderRelations(m) {
+    const edges = m.relations?.edges || [];
+    if (!edges.length) return `<div class="detail-section"><p>Không có quan hệ.</p></div>`;
+    const groups = {};
+    edges.forEach(e => { if (!groups[e.relationType]) groups[e.relationType] = []; groups[e.relationType].push(e); });
+    let html = `<div class="detail-section">`;
+    Object.entries(groups).forEach(([type, list]) => {
+        html += `<h3>${type} (${list.length})</h3><div class="rel-list">`;
+        list.forEach(r => {
+            const src = pickCover(r.node.coverImage);
+            html += `<button class="rel-item" data-goto="${r.node.id}">
+                ${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ''}
+                <div><div class="n">${r.node.title?.english || r.node.title?.romaji || '?'}</div>
+                <div class="rt">${r.node.seasonYear||''}${r.node.averageScore?' · '+r.node.averageScore+' điểm':''}</div></div>
+            </button>`;
+        });
+        html += `</div>`;
+    });
+    html += `</div>`;
+    return html;
+}
+
+function renderReviews(m) {
+    const reviews = m.reviews?.nodes || [];
+    let html = `<div class="detail-section">`;
+    if (!reviews.length) { html += `<p>Chưa có review từ cộng đồng.</p>`; }
+    else {
+        reviews.forEach(r => {
+            html += `<div class="review-item">
+                <div class="h"><div class="t">${r.summary || 'Review'}</div><div class="s">${r.score || ''}</div></div>
+                <div class="m">Bởi ${r.user?.name || 'Ẩn danh'} · ${new Date(r.createdAt*1000).toLocaleDateString('vi-VN')}</div>
+                <div class="b">${stripHtml(r.body).slice(0, 300)}${(r.body||'').length > 300 ? '…' : ''}</div>
+                <a class="more" href="https://anilist.co/review/${r.id}" target="_blank" rel="noopener">Đọc đầy đủ trên AniList →</a>
+            </div>`;
+        });
+    }
+    html += `</div>`;
+    return html;
+}
+
+function renderStats(m) {
+    const sd = m.stats?.scoreDistribution || [];
+    const std = m.stats?.statusDistribution || [];
+    const maxS = Math.max(1, ...sd.map(x => x.amount));
+    const maxT = Math.max(1, ...std.map(x => x.amount));
+    let html = `<div class="detail-section">`;
+    html += `<h3>Số liệu</h3><div class="info-grid">`;
+    [['Điểm TB', m.averageScore||'—'],['Mean', m.meanScore||'—'],['Phổ biến', fmtNum(m.popularity)],['Yêu thích', fmtNum(m.favourites)],['Trending', m.trending||'—'],['Hạng', m.rank ? '#'+m.rank : '—']].forEach(([k,v]) => html += `<div class="info-item"><div class="lbl">${k}</div><div class="val">${v}</div></div>`);
+    html += `</div>`;
+    if (sd.length) {
+        html += `<h3>Phân bố điểm</h3>`;
+        sd.sort((a,b)=>b.score-a.score).forEach(x => {
+            html += `<div class="bar-row"><div class="lbl">${x.score}</div><div class="bar"><div style="width:${(x.amount/maxS)*100}%"></div></div><div class="num">${fmtNum(x.amount)}</div></div>`;
+        });
+    }
+    if (std.length) {
+        html += `<h3>Phân bố trạng thái</h3>`;
+        std.sort((a,b)=>b.amount-a.amount).forEach(x => {
+            html += `<div class="bar-row"><div class="lbl">${x.status}</div><div class="bar"><div style="width:${(x.amount/maxT)*100}%"></div></div><div class="num">${fmtNum(x.amount)}</div></div>`;
+        });
+    }
+    html += `</div>`;
+    return html;
+}
+
+function renderEpisodes(m) {
+    const eps = m.streamingEpisodes || [];
+    const airing = m.airingSchedule?.nodes || [];
+    let html = `<div class="detail-section">`;
+    if (eps.length) {
+        html += `<h3>Tập có thể xem (${eps.length})</h3><div class="list" style="margin:0">`;
+        eps.forEach(e => {
+            html += `<a class="row" href="${e.url}" target="_blank" rel="noopener" style="text-decoration:none;color:var(--label)">
+                <div class="thumb">${e.thumbnail?`<img src="${e.thumbnail}" alt="" loading="lazy" decoding="async">`:''}</div>
+                <div class="txt"><div class="title">${e.title||'Tập'}</div><div class="desc">${e.site||''}</div></div>
+                <div class="chevron"></div>
+            </a>`;
+        });
+        html += `</div>`;
+    }
+    if (airing.length) {
+        html += `<h3>Lịch phát sóng (${airing.length})</h3><div class="list" style="margin:0">`;
+        airing.forEach(a => {
+            const past = a.airingAt < Date.now()/1000;
+            html += `<div class="row" style="cursor:default"><div class="txt"><div class="title">Tập ${a.episode}</div><div class="desc">${formatDate(a.airingAt)}</div></div><div class="countdown ${past?'':'soon'}" style="color:var(--accent);font-variant-numeric:tabular-nums">${past?'Đã chiếu':formatCountdown(a.airingAt)}</div></div>`;
+        });
+        html += `</div>`;
+    }
+    if (!eps.length && !airing.length) html += `<p>Chưa có thông tin tập.</p>`;
+    html += `</div>`;
+    return html;
+}
+
+function wireDetailActions(m) {
+    detailBody.querySelectorAll('[data-setstatus]').forEach(btn => {
+        btn.onclick = () => {
+            const st = btn.dataset.setstatus;
+            const cur = getEntry(m.id) || {};
+            setEntry(m.id, { ...cur, status: cur.status === st ? '' : st });
+            haptic(12); toast('Đã đánh dấu: ' + STATUS_LABELS[st], 'success');
+            renderDetailTab();
+        };
+    });
+    const p = $('progressInput'); if (p) p.onchange = () => { const cur = getEntry(m.id) || {}; setEntry(m.id, { ...cur, progress: +p.value||0 }); haptic(8); };
+    const r = $('ratingInput'); if (r) r.onchange = () => { const cur = getEntry(m.id) || {}; setEntry(m.id, { ...cur, rating: +r.value||0 }); haptic(8); };
+    const n = $('notesInput'); if (n) n.onchange = () => { const cur = getEntry(m.id) || {}; setEntry(m.id, { ...cur, notes: n.value }); haptic(8); };
+    detailBody.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { const nid = +b.dataset.goto; if (nid) openDetail(nid); });
+    detailBody.querySelectorAll('[data-char]').forEach(b => b.onclick = () => { openCharacterPage(+b.dataset.char); });
+    detailBody.querySelectorAll('[data-staff]').forEach(b => b.onclick = () => { openStaffPage(+b.dataset.staff); });
+    const sh = $('shareDetail'); if (sh) sh.onclick = shareDetail;
+}
+
+async function openCharacterPage(id) {
+    detailTitle.textContent = 'Nhân vật';
+    detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--label2)">Đang tải...</div>';
+    try {
+        const c = await fetchCharacter(id);
+        if (!c) { detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red)">Không tải được.</div>'; return; }
+        detailTitle.textContent = c.name?.full || 'Nhân vật';
+        let html = `<div class="detail-head" style="margin-top:16px"><img class="poster-img" style="border-radius:50%;height:100px;width:100px;flex:0 0 100px" src="${c.image?.large||''}" alt="" loading="lazy" decoding="async"><div class="meta-col" style="padding-top:8px"><h2>${c.name?.full||''}</h2><div class="sub">${c.name?.native||''}</div></div></div>`;
+        html += `<div class="detail-section"><h3>Thông tin</h3><div class="info-grid">`;
+        [['Giới tính', c.gender||'—'],['Ngày sinh', fmtDateParts(c.dateOfBirth)],['Tuổi', c.age||'—'],['Nhóm máu', c.bloodType||'—'],['Yêu thích', fmtNum(c.favourites)]].forEach(([k,v]) => html += `<div class="info-item"><div class="lbl">${k}</div><div class="val">${v}</div></div>`);
+        html += `</div>`;
+        if (c.description) html += `<h3>Tiểu sử</h3><p>${stripHtml(c.description)}</p>`;
+        const edges = c.media?.edges || [];
+        if (edges.length) {
+            html += `<h3>Xuất hiện trong (${edges.length})</h3><div class="rel-list">`;
+            edges.forEach(e => {
+                const va = e.voiceActors && e.voiceActors[0];
+                const src = pickCover(e.node.coverImage);
+                html += `<button class="rel-item" data-goto="${e.node.id}">
+                    ${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ''}
+                    <div><div class="n">${e.node.title?.english||e.node.title?.romaji||'?'}</div>
+                    <div class="rt">${e.characterRole||''}${va?' · '+va.name.full:''}</div></div>
+                </button>`;
+            });
+            html += `</div>`;
+        }
+        html += `</div>`;
+        detailBody.innerHTML = html;
+        detailBody.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { const nid = +b.dataset.goto; if (nid) openDetail(nid); });
+    } catch (e) { detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red)">Lỗi tải.</div>'; }
+}
+
+async function openStaffPage(id) {
+    detailTitle.textContent = 'Staff';
+    detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--label2)">Đang tải...</div>';
+    try {
+        const s = await fetchStaff(id);
+        if (!s) { detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red)">Không tải được.</div>'; return; }
+        detailTitle.textContent = s.name?.full || 'Staff';
+        let html = `<div class="detail-head" style="margin-top:16px"><img class="poster-img" style="border-radius:50%;height:100px;width:100px;flex:0 0 100px" src="${s.image?.large||''}" alt="" loading="lazy" decoding="async"><div class="meta-col" style="padding-top:8px"><h2>${s.name?.full||''}</h2><div class="sub">${(s.primaryOccupations||[]).join(', ')}</div></div></div>`;
+        html += `<div class="detail-section"><h3>Thông tin</h3><div class="info-grid">`;
+        [['Ngày sinh', fmtDateParts(s.dateOfBirth)],['Tuổi', s.age||'—'],['Quê quán', s.homeTown||'—'],['Yêu thích', fmtNum(s.favourites)]].forEach(([k,v]) => html += `<div class="info-item"><div class="lbl">${k}</div><div class="val">${v}</div></div>`);
+        html += `</div>`;
+        if (s.description) html += `<h3>Tiểu sử</h3><p>${stripHtml(s.description)}</p>`;
+        const sm = s.staffMedia?.edges || [];
+        if (sm.length) {
+            html += `<h3>Tham gia (${sm.length})</h3><div class="rel-list">`;
+            sm.forEach(e => {
+                const src = pickCover(e.node.coverImage);
+                html += `<button class="rel-item" data-goto="${e.node.id}">
+                    ${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ''}
+                    <div><div class="n">${e.node.title?.english||e.node.title?.romaji||'?'}</div><div class="rt">${e.staffRole||''}</div></div>
+                </button>`;
+            });
+            html += `</div>`;
+        }
+        html += `</div>`;
+        detailBody.innerHTML = html;
+        detailBody.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { const nid = +b.dataset.goto; if (nid) openDetail(nid); });
+    } catch (e) { detailBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red)">Lỗi tải.</div>'; }
+}
+
+function closeDetail() { detailPage.classList.remove('open'); document.body.style.overflow = ''; state.currentId = null; state.detailData = null; }
+detailBack.onclick = closeDetail;
+detailShare.onclick = shareDetail;
+function shareDetail() {
+    const m = state.detailData; if (!m) return;
+    const title = m.title?.english || m.title?.romaji || m.title?.native || 'Anime';
+    const url = `https://anilist.co/anime/${m.id}`;
+    if (navigator.share) navigator.share({ title, text: title, url }).catch(()=>{});
+    else { navigator.clipboard.writeText(url).then(() => toast('Đã copy link', 'success')); }
+}
+
+function closeSheet() { backdrop.classList.remove('open'); sheet.classList.remove('open'); }
+sheetClose.onclick = closeSheet; backdrop.onclick = closeSheet;
+
+function syncTabs() {
+    tabbar.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); if (t.dataset.tab === state.tab) { t.classList.add('active'); t.setAttribute('aria-selected','true'); } });
+    const showSearch = state.tab === 'search' || state.tab === 'home';
+    $('searchWrap').style.display = showSearch ? '' : 'none';
+    seasonChips.style.display = state.tab === 'home' ? '' : 'none';
+    nav.classList.toggle('back', false);
+}
+
+function render() {
+    if (state.tab === 'home') renderHome();
+    else if (state.tab === 'schedule') renderSchedule();
+    else if (state.tab === 'search') renderSearch();
+    else if (state.tab === 'saved') renderSaved();
+    else if (state.tab === 'settings') renderSettings();
+}
+
+qEl.addEventListener('input', () => {
+    if (state.tab !== 'search') { state.tab = 'search'; syncTabs(); }
+    if (!state.searchTimer) renderSearch();
+});
+seasonChips.addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    seasonChips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    b.classList.add('active'); state.season = b.dataset.season;
+    haptic();
+    if (state.tab !== 'home') { state.tab='home'; syncTabs(); }
+    renderHome();
+});
+tabbar.addEventListener('click', e => {
+    const b = e.target.closest('.tab'); if (!b) return;
+    state.tab = b.dataset.tab; haptic(); syncTabs();
+    qEl.value = ''; state.query = '';
+    render();
+    window.scrollTo({ top:0, behavior:'smooth' });
+});
+$('navAction').onclick = () => {
+    if (state.tab === 'home') { haptic(); sessionStorage.clear(); render(); toast('Đã làm mới', 'success'); }
+};
+window.addEventListener('scroll', () => {
+    if (window.scrollY > 20) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
+}, { passive:true });
+
+let startX = 0, startY = 0, swiping = false;
+document.addEventListener('touchstart', e => {
+    if (!detailPage.classList.contains('open')) return;
+    const t = e.touches[0];
+    if (t.clientX < 30) { startX = t.clientX; startY = t.clientY; swiping = true; }
+}, { passive:true });
+document.addEventListener('touchmove', e => {
+    if (!swiping) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX, dy = Math.abs(t.clientY - startY);
+    if (dx > 0 && dy < 40) { detailPage.style.transform = `translateX(${dx}px)`; }
+}, { passive:true });
+document.addEventListener('touchend', () => {
+    if (!swiping) return;
+    const rect = detailPage.getBoundingClientRect();
+    detailPage.style.transform = '';
+    if (rect.left > 80) closeDetail();
+    swiping = false;
+}, { passive:true });
+
+let sy = 0, sd = 0, sdr = false;
+sheet.addEventListener('touchstart', e => { if (sheet.scrollTop > 0) return; sy = e.touches[0].clientY; sdr = true; }, { passive:true });
+sheet.addEventListener('touchmove', e => { if (!sdr) return; sd = e.touches[0].clientY - sy; if (sd > 0) sheet.style.transform = `translateY(${sd}px)`; }, { passive:true });
+sheet.addEventListener('touchend', () => { if (!sdr) return; sdr = false; if (sd > 100) closeSheet(); sheet.style.transform = ''; sd = 0; });
+
+applySettings();
+syncTabs();
+renderHome();
+</script>
+
+</body>
+</html> sdr = true; }, { passive:true });
+sheet.addEventListener('touchmove', e => { if (!sdr) return; sd = e.touches[0].clientY - sy; if (sd > 0) sheet.style.transform = `translateY(${sd}px)`; }, { passive:true });
+sheet.addEventListener('touchend', () => { if (!sdr) return; sdr = false; if (sd > 100) closeSheet(); sheet.style.transform = ''; sd = 0; });
+
+applySettings();
+syncTabs();
+renderHome();
+</script>
+
+</body>
+  </html>

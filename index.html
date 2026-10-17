@@ -282,7 +282,7 @@ const toastEl = $('toast');
 const API = 'https://graphql.anilist.co';
 const STORE_KEY = 'anime_v3_watchlist';
 const SETTINGS_KEY = 'anime_v3_settings';
-const CACHE_KEY = 'anime_v3_cache_v6';
+const CACHE_KEY = 'anime_v3_cache_v7';
 const STATUS_LIST = ['watching','planning','considering','completed','paused','dropped','rewatching','skipping'];
 const STATUS_LABELS = { watching:'Đang xem', planning:'Dự định', considering:'Cân nhắc', completed:'Đã xong', paused:'Tạm dừng', dropped:'Bỏ', rewatching:'Xem lại', skipping:'Bỏ qua' };
 const GENRES = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Horror','Mahou Shoujo','Mecha','Music','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Thriller'];
@@ -315,7 +315,7 @@ function setEntry(id, entry) {
     setStore(s);
 }
 
-// Gọi API có Cache & Retry thông minh
+// Hàm gọi API tối ưu dùng GET để chống chặn CORS trên GitHub Pages
 async function gql(query, variables, retries = 3) {
     const key = CACHE_KEY + ':' + btoa(unescape(encodeURIComponent(JSON.stringify(variables||{})))).slice(0,100);
     try { 
@@ -328,10 +328,15 @@ async function gql(query, variables, retries = 3) {
 
     for (let i = 0; i < retries; i++) {
         try {
-            const res = await fetch(API, { 
-                method:'POST', 
-                headers:{ 'Content-Type':'application/json', 'Accept':'application/json' }, 
-                body: JSON.stringify({ query, variables }) 
+            const url = new URL(API);
+            url.searchParams.append('query', query);
+            if (variables) {
+                url.searchParams.append('variables', JSON.stringify(variables));
+            }
+
+            const res = await fetch(url, { 
+                method: 'GET', 
+                headers: { 'Accept': 'application/json' } 
             });
 
             if (res.status === 429) {
@@ -346,7 +351,22 @@ async function gql(query, variables, retries = 3) {
             try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
             return data;
         } catch (err) {
-            if (i === retries - 1) throw err;
+            if (i === retries - 1) {
+                // Thử fallback sang POST nếu GET thất bại hoàn toàn
+                try {
+                    const resPost = await fetch(API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({ query, variables })
+                    });
+                    if (resPost.ok) {
+                        const data = await resPost.json();
+                        try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+                        return data;
+                    }
+                } catch (e2) {}
+                throw err;
+            }
             await new Promise(r => setTimeout(r, 1000 * (i + 1)));
         }
     }
@@ -404,7 +424,6 @@ async function fetchBrowse(filters, page) {
     return { items: (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [], status:m.status, episodes:m.episodes, format:m.format, year:m.seasonYear })), hasNext: d?.data?.Page?.pageInfo?.hasNextPage || false };
 }
 
-// 1. Tối ưu hàm fetchDetail nhẹ đi 80% (Không gây nghẽn AniList nữa)
 async function fetchDetail(id) {
     const d = await gql(`query ($id:Int) {
         Media(id:$id, type:ANIME) {
@@ -423,7 +442,6 @@ async function fetchDetail(id) {
     return d?.data?.Media || null;
 }
 
-// 2. Các hàm tải phụ dạng Lazy Load (Bấm mới tải)
 async function fetchDetailCharacters(id) {
     const d = await gql(`query ($id:Int) {
         Media(id:$id, type:ANIME) {
@@ -776,7 +794,7 @@ function renderSettings() {
                     <button class="chip" data-haptic="0">Tắt</button>
                 </div>
                 <div class="row" id="clearDataBtn"><div class="txt"><div class="title" style="color:var(--red)">Xóa toàn bộ dữ liệu</div><div class="desc">Watchlist, rating, notes, cache</div></div><div class="chevron"></div></div>
-                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.4 (Optimized)</div></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.5 (GET Optimized)</div></div></div>
                 <div class="row" style="cursor:default"><div class="txt"><div class="title">API</div><div class="desc">AniList GraphQL · Public · Không cần Key</div></div></div>
             </div>
         </div>`;

@@ -282,7 +282,7 @@ const toastEl = $('toast');
 const API = 'https://graphql.anilist.co';
 const STORE_KEY = 'anime_v3_watchlist';
 const SETTINGS_KEY = 'anime_v3_settings';
-const CACHE_KEY = 'anime_v3_cache_v5';
+const CACHE_KEY = 'anime_v3_cache_v6';
 const STATUS_LIST = ['watching','planning','considering','completed','paused','dropped','rewatching','skipping'];
 const STATUS_LABELS = { watching:'Đang xem', planning:'Dự định', considering:'Cân nhắc', completed:'Đã xong', paused:'Tạm dừng', dropped:'Bỏ', rewatching:'Xem lại', skipping:'Bỏ qua' };
 const GENRES = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Horror','Mahou Shoujo','Mecha','Music','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Thriller'];
@@ -315,14 +315,14 @@ function setEntry(id, entry) {
     setStore(s);
 }
 
-// Hàm gọi API với cơ chế Retry & Tăng thời gian Cache tối ưu cho GitHub Pages
+// Gọi API có Cache & Retry thông minh
 async function gql(query, variables, retries = 3) {
     const key = CACHE_KEY + ':' + btoa(unescape(encodeURIComponent(JSON.stringify(variables||{})))).slice(0,100);
     try { 
         const c = sessionStorage.getItem(key); 
         if (c) { 
             const { data, ts } = JSON.parse(c); 
-            if (Date.now()-ts < 15*60*1000) return data; // Tăng cache lên 15 phút
+            if (Date.now()-ts < 15*60*1000) return data; 
         } 
     } catch {}
 
@@ -335,7 +335,6 @@ async function gql(query, variables, retries = 3) {
             });
 
             if (res.status === 429) {
-                // Rate limit -> Đợi 1.5s rồi thử lại
                 await new Promise(r => setTimeout(r, 1500 * (i + 1)));
                 continue;
             }
@@ -405,6 +404,7 @@ async function fetchBrowse(filters, page) {
     return { items: (d?.data?.Page?.media || []).map(m => ({ id:m.id, title: m.title?.english || m.title?.romaji || m.title?.native || '?', cover: pickCover(m.coverImage), score: m.averageScore || 0, popularity: m.popularity || 0, genres: m.genres || [], status:m.status, episodes:m.episodes, format:m.format, year:m.seasonYear })), hasNext: d?.data?.Page?.pageInfo?.hasNextPage || false };
 }
 
+// 1. Tối ưu hàm fetchDetail nhẹ đi 80% (Không gây nghẽn AniList nữa)
 async function fetchDetail(id) {
     const d = await gql(`query ($id:Int) {
         Media(id:$id, type:ANIME) {
@@ -417,22 +417,58 @@ async function fetchDetail(id) {
             trailer { site id }
             externalLinks { site url }
             streamingEpisodes { title url site thumbnail }
-            characters(sort: ROLE, perPage: 24) {
-                edges {
-                    role
-                    node { id name { full native } image { large medium } favourites }
-                    voiceActors { name { full } image { large medium } }
-                }
-            }
-            staff(sort: RELEVANCE, perPage: 24) { edges { role node { id name { full } image { large medium } } } }
-            relations { edges { relationType node { id title { romaji english } coverImage { medium large extraLarge } averageScore seasonYear } } }
-            recommendations(sort: RATING_DESC, perPage: 10) { nodes { mediaRecommendation { id title { romaji english } coverImage { medium large extraLarge } } } }
-            reviews(sort: RATING_DESC, perPage: 5) { nodes { id summary body(asHtml:false) score createdAt user { name } } }
-            stats { scoreDistribution { score amount } statusDistribution { status amount } }
             airingSchedule(perPage: 50) { nodes { airingAt episode timeUntilAiring } }
         }
     }`, { id });
     return d?.data?.Media || null;
+}
+
+// 2. Các hàm tải phụ dạng Lazy Load (Bấm mới tải)
+async function fetchDetailCharacters(id) {
+    const d = await gql(`query ($id:Int) {
+        Media(id:$id, type:ANIME) {
+            characters(sort: ROLE, perPage: 20) {
+                edges { role node { id name { full native } image { large medium } favourites } voiceActors { name { full } } }
+            }
+        }
+    }`, { id });
+    return d?.data?.Media?.characters?.edges || [];
+}
+
+async function fetchDetailStaff(id) {
+    const d = await gql(`query ($id:Int) {
+        Media(id:$id, type:ANIME) {
+            staff(sort: RELEVANCE, perPage: 20) { edges { role node { id name { full } image { large medium } } } }
+        }
+    }`, { id });
+    return d?.data?.Media?.staff?.edges || [];
+}
+
+async function fetchDetailRelations(id) {
+    const d = await gql(`query ($id:Int) {
+        Media(id:$id, type:ANIME) {
+            relations { edges { relationType node { id title { romaji english } coverImage { medium large extraLarge } averageScore seasonYear } } }
+        }
+    }`, { id });
+    return d?.data?.Media?.relations?.edges || [];
+}
+
+async function fetchDetailReviews(id) {
+    const d = await gql(`query ($id:Int) {
+        Media(id:$id, type:ANIME) {
+            reviews(sort: RATING_DESC, perPage: 5) { nodes { id summary body(asHtml:false) score createdAt user { name } } }
+        }
+    }`, { id });
+    return d?.data?.Media?.reviews?.nodes || [];
+}
+
+async function fetchDetailStats(id) {
+    const d = await gql(`query ($id:Int) {
+        Media(id:$id, type:ANIME) {
+            stats { scoreDistribution { score amount } statusDistribution { status amount } }
+        }
+    }`, { id });
+    return d?.data?.Media?.stats || null;
 }
 
 async function fetchCharacter(id) {
@@ -441,11 +477,7 @@ async function fetchCharacter(id) {
             id name { full native } image { large } description(asHtml:false)
             gender dateOfBirth { year month day } age bloodType favourites
             media(sort: POPULARITY_DESC, perPage: 12) {
-                edges {
-                    characterRole
-                    voiceActors { name { full } image { medium large } }
-                    node { id title { romaji english } coverImage { medium large extraLarge } }
-                }
+                edges { characterRole voiceActors { name { full } } node { id title { romaji english } coverImage { medium large extraLarge } } }
             }
         }
     }`, { id });
@@ -456,7 +488,7 @@ async function fetchStaff(id) {
     const d = await gql(`query ($id:Int) {
         Staff(id:$id) {
             id name { full native } image { large } description(asHtml:false)
-            languageV2 primaryOccupations dateOfBirth { year month day } age homeTown favourites
+            primaryOccupations dateOfBirth { year month day } age homeTown favourites
             staffMedia(sort: POPULARITY_DESC, perPage: 12) {
                 edges { staffRole node { id title { romaji english } coverImage { medium large extraLarge } } }
             }
@@ -502,11 +534,9 @@ function scheduleRow(s) {
     return b;
 }
 
-// Tối ưu hàm renderHome tránh bị quá tải API trên GitHub Pages
 async function renderHome() {
     renderSkeleton();
     try {
-        // Tải trước 2 mục quan trọng nhất
         const [trending, schedule] = await Promise.all([
             fetchTopList(['TRENDING_DESC']), 
             fetchSchedule()
@@ -529,7 +559,6 @@ async function renderHome() {
         
         if (hero) $('heroBtn').onclick = () => openDetail(hero.id);
         
-        // Render Trending trước
         const trendingContainer = mainEl.querySelector('.hscroll[data-sec="Đang trending"]');
         if (trendingContainer) trending.forEach(m => trendingContainer.appendChild(posterCard(m)));
 
@@ -537,7 +566,6 @@ async function renderHome() {
         if (today.length) today.forEach(s => tl.appendChild(scheduleRow(s)));
         else tl.innerHTML = '<div style="padding:16px;color:var(--label2);font-size:14px">Không có tập nào hôm nay.</div>';
 
-        // Tải nối các mục còn lại sau để không nghẽn đường truyền
         fetchSeason(state.season === 'now' ? currentSeason() : state.season, new Date().getFullYear()).then(list => {
             const c = mainEl.querySelector('.hscroll[data-sec="Mùa này"]');
             if (c) list.forEach(m => c.appendChild(posterCard(m)));
@@ -748,8 +776,8 @@ function renderSettings() {
                     <button class="chip" data-haptic="0">Tắt</button>
                 </div>
                 <div class="row" id="clearDataBtn"><div class="txt"><div class="title" style="color:var(--red)">Xóa toàn bộ dữ liệu</div><div class="desc">Watchlist, rating, notes, cache</div></div><div class="chevron"></div></div>
-                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.3 (GitHub Edition)</div></div></div>
-                <div class="row" style="cursor:default"><div class="txt"><div class="title">API</div><div class="desc">AniList GraphQL · Public · không cần Key</div></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">Phiên bản</div><div class="desc">Anime Schedule v3.4 (Optimized)</div></div></div>
+                <div class="row" style="cursor:default"><div class="txt"><div class="title">API</div><div class="desc">AniList GraphQL · Public · Không cần Key</div></div></div>
             </div>
         </div>`;
     mainEl.querySelectorAll('[data-fs]').forEach(b => { b.classList.toggle('active', (s.fontSize||'default') === b.dataset.fs); b.onclick = () => { const st = getSettings(); st.fontSize = b.dataset.fs; setSettings(st); applySettings(); renderSettings(); haptic(); }; });
@@ -780,7 +808,7 @@ async function openDetail(id) {
     }
 }
 
-function renderDetailTab() {
+async function renderDetailTab() {
     const m = state.detailData;
     if (!m) return;
     const tab = state.detailTab;
@@ -791,15 +819,6 @@ function renderDetailTab() {
     let tabs = `<div class="segmented" id="detailTabs">`;
     [['overview','Tổng quan'],['characters','Nhân vật'],['staff','Staff'],['relations','Quan hệ'],['reviews','Đánh giá'],['stats','Thống kê'],['episodes','Tập phim']].forEach(([k,l]) => { tabs += `<button data-dtab="${k}" class="${tab===k?'active':''}">${l}</button>`; });
     tabs += `</div>`;
-
-    let content = '';
-    if (tab === 'overview') content = renderOverview(m, entry, studios);
-    else if (tab === 'characters') content = renderCharacters(m);
-    else if (tab === 'staff') content = renderStaff(m);
-    else if (tab === 'relations') content = renderRelations(m);
-    else if (tab === 'reviews') content = renderReviews(m);
-    else if (tab === 'stats') content = renderStats(m);
-    else if (tab === 'episodes') content = renderEpisodes(m);
 
     const bannerSrc = m.bannerImage || pickCover(m.coverImage);
     const posterSrc = pickCover(m.coverImage);
@@ -817,10 +836,36 @@ function renderDetailTab() {
         ${m.rank ? `<span>Hạng <strong>#${m.rank}</strong></span>` : ''}
     </div></div></div>`;
 
-    detailBody.innerHTML = head + tabs + `<div id="detailTabContent">${content}</div>`;
+    detailBody.innerHTML = head + tabs + `<div id="detailTabContent"><div style="padding:32px;text-align:center;color:var(--label2)">Đang tải...</div></div>`;
 
     detailBody.querySelectorAll('[data-dtab]').forEach(b => b.onclick = () => { state.detailTab = b.dataset.dtab; renderDetailTab(); });
-    wireDetailActions(m);
+
+    const contentEl = $('detailTabContent');
+
+    if (tab === 'overview') {
+        contentEl.innerHTML = renderOverview(m, entry, studios);
+        wireDetailActions(m);
+    } else if (tab === 'episodes') {
+        contentEl.innerHTML = renderEpisodes(m);
+    } else if (tab === 'characters') {
+        const chars = await fetchDetailCharacters(m.id);
+        contentEl.innerHTML = renderCharacters(chars);
+        contentEl.querySelectorAll('[data-char]').forEach(b => b.onclick = () => openCharacterPage(+b.dataset.char));
+    } else if (tab === 'staff') {
+        const staff = await fetchDetailStaff(m.id);
+        contentEl.innerHTML = renderStaff(staff);
+        contentEl.querySelectorAll('[data-staff]').forEach(b => b.onclick = () => openStaffPage(+b.dataset.staff));
+    } else if (tab === 'relations') {
+        const rels = await fetchDetailRelations(m.id);
+        contentEl.innerHTML = renderRelations(rels);
+        contentEl.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => openDetail(+b.dataset.goto));
+    } else if (tab === 'reviews') {
+        const reviews = await fetchDetailReviews(m.id);
+        contentEl.innerHTML = renderReviews(reviews);
+    } else if (tab === 'stats') {
+        const stats = await fetchDetailStats(m.id);
+        contentEl.innerHTML = renderStats(m, stats);
+    }
 }
 
 function renderOverview(m, entry, studios) {
@@ -876,8 +921,7 @@ function renderOverview(m, entry, studios) {
     return html;
 }
 
-function renderCharacters(m) {
-    const edges = m.characters?.edges || [];
+function renderCharacters(edges) {
     const main = edges.filter(e => e.role === 'MAIN');
     const sup = edges.filter(e => e.role === 'SUPPORTING');
     let html = `<div class="detail-section">`;
@@ -887,6 +931,7 @@ function renderCharacters(m) {
     html += `</div>`;
     return html;
 }
+
 function charItem(c) {
     const va = c.voiceActors && c.voiceActors[0];
     const img = c.node.image?.large || c.node.image?.medium || '';
@@ -897,8 +942,7 @@ function charItem(c) {
     </button>`;
 }
 
-function renderStaff(m) {
-    const edges = m.staff?.edges || [];
+function renderStaff(edges) {
     let html = `<div class="detail-section"><h3>Staff (${edges.length})</h3><div class="char-grid">`;
     edges.forEach(s => {
         const img = s.node.image?.large || s.node.image?.medium || '';
@@ -912,8 +956,7 @@ function renderStaff(m) {
     return html;
 }
 
-function renderRelations(m) {
-    const edges = m.relations?.edges || [];
+function renderRelations(edges) {
     if (!edges.length) return `<div class="detail-section"><p>Không có quan hệ.</p></div>`;
     const groups = {};
     edges.forEach(e => { if (!groups[e.relationType]) groups[e.relationType] = []; groups[e.relationType].push(e); });
@@ -934,10 +977,9 @@ function renderRelations(m) {
     return html;
 }
 
-function renderReviews(m) {
-    const reviews = m.reviews?.nodes || [];
+function renderReviews(reviews) {
     let html = `<div class="detail-section">`;
-    if (!reviews.length) { html += `<p>Chưa có review từ cộng đồng.</p>`; }
+    if (!reviews || !reviews.length) { html += `<p>Chưa có review từ cộng đồng.</p>`; }
     else {
         reviews.forEach(r => {
             html += `<div class="review-item">
@@ -952,9 +994,9 @@ function renderReviews(m) {
     return html;
 }
 
-function renderStats(m) {
-    const sd = m.stats?.scoreDistribution || [];
-    const std = m.stats?.statusDistribution || [];
+function renderStats(m, stats) {
+    const sd = stats?.scoreDistribution || [];
+    const std = stats?.statusDistribution || [];
     const maxS = Math.max(1, ...sd.map(x => x.amount));
     const maxT = Math.max(1, ...std.map(x => x.amount));
     let html = `<div class="detail-section">`;
@@ -1018,9 +1060,6 @@ function wireDetailActions(m) {
     const p = $('progressInput'); if (p) p.onchange = () => { const cur = getEntry(m.id) || {}; setEntry(m.id, { ...cur, progress: +p.value||0 }); haptic(8); };
     const r = $('ratingInput'); if (r) r.onchange = () => { const cur = getEntry(m.id) || {}; setEntry(m.id, { ...cur, rating: +r.value||0 }); haptic(8); };
     const n = $('notesInput'); if (n) n.onchange = () => { const cur = getEntry(m.id) || {}; setEntry(m.id, { ...cur, notes: n.value }); haptic(8); };
-    detailBody.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { const nid = +b.dataset.goto; if (nid) openDetail(nid); });
-    detailBody.querySelectorAll('[data-char]').forEach(b => b.onclick = () => { openCharacterPage(+b.dataset.char); });
-    detailBody.querySelectorAll('[data-staff]').forEach(b => b.onclick = () => { openStaffPage(+b.dataset.staff); });
     const sh = $('shareDetail'); if (sh) sh.onclick = shareDetail;
 }
 
